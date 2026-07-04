@@ -38,6 +38,7 @@ from text_normalization_pipeline import (
 
 APP_DIR = Path(__file__).resolve().parent
 DEMO_METADATA_PATH = APP_DIR / "assets" / "demo.jsonl"
+VOICES_METADATA_PATH = APP_DIR / "assets" / "audio" / "voices.json"
 PROMPT_UPLOAD_DIR = APP_DIR / ".app_prompt_uploads"
 
 
@@ -103,6 +104,50 @@ def _load_demo_entries() -> list[DemoEntry]:
             )
         )
     return demo_entries
+
+
+def _load_voices_manifest() -> dict[str, dict[str, str]]:
+    """Load the voice name manifest from assets/audio/voices.json.
+
+    Expected format:
+    {
+      "zh_female_1": {
+        "name": "中文女声",
+        "file": "assets/audio/zh_1.wav",
+        "description": "标准中文女声，适合朗读"
+      },
+      ...
+    }
+    """
+    if not VOICES_METADATA_PATH.is_file():
+        logging.warning("voice manifest not found: %s", VOICES_METADATA_PATH)
+        return {}
+    try:
+        raw = json.loads(VOICES_METADATA_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        logging.warning("failed to parse voice manifest: %s", VOICES_METADATA_PATH, exc_info=True)
+        return {}
+    if not isinstance(raw, dict):
+        logging.warning("voice manifest must be a JSON object: %s", VOICES_METADATA_PATH)
+        return {}
+    validated: dict[str, dict[str, str]] = {}
+    for voice_id, info in raw.items():
+        if not isinstance(info, dict):
+            continue
+        file_path = str(info.get("file", "")).strip()
+        name = str(info.get("name", "")).strip()
+        if not file_path or not name:
+            continue
+        resolved = (APP_DIR / file_path).resolve()
+        if not resolved.is_file():
+            logging.warning("voice file not found: %s (voice_id=%s)", resolved, voice_id)
+            continue
+        validated[voice_id] = {
+            "name": name,
+            "file": file_path,
+            "description": str(info.get("description", "")).strip(),
+        }
+    return validated
 
 
 def _resolve_vscode_root_path(vscode_proxy_uri: Optional[str], server_port: int) -> Optional[str]:
@@ -2181,6 +2226,7 @@ def _build_app(
     runtime_manager = RequestRuntimeManager(runtime)
     demo_entries = _load_demo_entries()
     demo_entries_by_id = {demo_entry.demo_id: demo_entry for demo_entry in demo_entries}
+    voices_manifest = _load_voices_manifest()
 
     def _resolve_voice_clone_text_chunks(
         *,
@@ -2484,6 +2530,20 @@ def _build_app(
             "status_text": _text_normalization_status_text(snapshot),
         }
 
+    @app.get("/api/voices")
+    async def list_voices():
+        return {
+            "voices": [
+                {
+                    "id": voice_id,
+                    "name": info["name"],
+                    "file": info["file"],
+                    "description": info["description"],
+                }
+                for voice_id, info in voices_manifest.items()
+            ]
+        }
+
     @app.get("/api/demo-prompt-audio/{demo_id}")
     async def demo_prompt_audio(demo_id: str):
         try:
@@ -2521,12 +2581,22 @@ def _build_app(
         audio_repetition_penalty: float = Form(1.2),
         seed: str = Form("0"),
     ):
-        try:
-            demo_entry, prompt_audio_path, prompt_audio_display_path, prompt_audio_cleanup_path = (
-                await _resolve_prompt_audio_request(demo_id=demo_id, prompt_audio=prompt_audio)
-            )
-        except ValueError as exc:
-            return JSONResponse(status_code=400, content={"error": str(exc)})
+        voice_name = str(voice_name or "").strip()
+        if voice_name:
+            voice_info = voices_manifest.get(voice_name)
+            if voice_info is None:
+                return JSONResponse(status_code=400, content={"error": f"Unknown voice_name: {voice_name}. Use GET /api/voices to list available voices."})
+            prompt_audio_path = str((APP_DIR / voice_info["file"]).resolve())
+            prompt_audio_display_path = voice_info["file"]
+            prompt_audio_cleanup_path = None
+            demo_entry = None
+        else:
+            try:
+                demo_entry, prompt_audio_path, prompt_audio_display_path, prompt_audio_cleanup_path = (
+                    await _resolve_prompt_audio_request(demo_id=demo_id, prompt_audio=prompt_audio)
+                )
+            except ValueError as exc:
+                return JSONResponse(status_code=400, content={"error": str(exc)})
 
         resolved_text = str(text or "").strip() or (demo_entry.text if demo_entry is not None else "")
         if not resolved_text:
@@ -2712,6 +2782,7 @@ def _build_app(
     @app.post("/api/generate")
     async def generate(
         text: str = Form(...),
+        voice_name: str = Form(""),
         demo_id: str = Form(""),
         prompt_audio: UploadFile | None = File(None),
         max_new_frames: int = Form(375),

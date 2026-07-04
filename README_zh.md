@@ -354,6 +354,52 @@ moss-tts-nano serve \
 
 此命令会转发到对应的 Web App，将模型保持在内存中加载，并为本地浏览器演示和 HTTP 生成端点提供服务。
 
+### HTTP API
+
+启动服务后（`pixi run serve` 或 `pixi run serve-onnx`），可通过 HTTP API 进行语音合成：
+
+**获取可用语音列表**
+
+```bash
+curl http://localhost:18083/api/voices
+```
+
+返回示例：
+
+```json
+{
+  "voices": [
+    {"id": "zh_female_1", "name": "中文女声", "file": "assets/audio/zh_1.wav", "description": "标准中文女声，适合朗读"},
+    {"id": "zh_gentle_6", "name": "中文温柔女声", "file": "assets/audio/zh_6.wav", "description": "深夜温柔风格，适合睡前故事"}
+  ]
+}
+```
+
+**方式一：按名称直接选用预制语音（推荐）**
+
+```bash
+curl -s -X POST http://localhost:18083/api/generate \
+  -F "voice_name=zh_female_1" \
+  -F "text=第一章。在很久很久以前，有一座大山，山脚下住着一位老爷爷。" \
+  | python3 -c "
+import sys, json, base64
+data = json.load(sys.stdin)
+with open('chapter1.wav', 'wb') as f:
+    f.write(base64.b64decode(data['audio_base64']))
+print('已保存: chapter1.wav')
+"
+```
+
+**方式二：上传自己的参考音频**
+
+```bash
+curl -X POST http://localhost:18083/api/generate \
+  -F "text=你好，这是我的声音克隆。" \
+  -F "prompt_audio=@my_voice.wav"
+```
+
+所有方式均支持长文本自动分块语音克隆，返回 `48kHz` 立体声 WAV 音频（base64 编码）。
+
 如需以分页 KV 缓存、流式推理以及 OpenAI 兼容 `/v1/audio/speech` 接口部署服务，请参考 [vLLM-Omni MOSS-TTS-Nano README](https://github.com/vllm-project/vllm-omni/blob/main/examples/online_serving/moss_tts_nano/README.md)。
 
 ### 微调

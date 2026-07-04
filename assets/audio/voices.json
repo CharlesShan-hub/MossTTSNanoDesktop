@@ -1,0 +1,67 @@
+{
+  "zh_female_1": {
+    "name": "中文女声",
+    "file": "assets/audio/zh_1.wav",
+    "description": "标准中文女声，适合朗读"
+  },
+  "zh_gentle_6": {
+    "name": "中文温柔女声",
+    "file": "assets/audio/zh_6.wav",
+    "description": "深夜温柔风格，适合睡前故事"
+  },
+  "zh_taiwan_4": {
+    "name": "台湾腔女声",
+    "file": "assets/audio/zh_4.wav",
+    "description": "活泼台湾腔，适合轻松内容"
+  },
+  "zh_beijing_3": {
+    "name": "京味男声",
+    "file": "assets/audio/zh_3.wav",
+    "description": "北京胡同闲聊风格"
+  },
+  "zh_culture_10": {
+    "name": "中文讲述男声",
+    "file": "assets/audio/zh_10.wav",
+    "description": "沉稳讲述风格，适合知识类内容"
+  },
+  "zh_yangmi_11": {
+    "name": "杨幂风格女声",
+    "file": "assets/audio/zh_11.wav",
+    "description": "冷静自述风格，适合内心独白"
+  },
+  "en_news_4": {
+    "name": "英文新闻女声",
+    "file": "assets/audio/en_4.wav",
+    "description": "标准英文新闻播报"
+  },
+  "en_bitter_2": {
+    "name": "英文讲述男声",
+    "file": "assets/audio/en_2.wav",
+    "description": "沉稳英文讲述，适合知识内容"
+  },
+  "en_reminder_3": {
+    "name": "英文温柔女声",
+    "file": "assets/audio/en_3.wav",
+    "description": "温暖鼓励风格"
+  },
+  "en_openmoss_6": {
+    "name": "英文正式女声",
+    "file": "assets/audio/en_6.wav",
+    "description": "正式介绍风格"
+  },
+  "en_taylor_7": {
+    "name": "英文 Taylor Swift 风格",
+    "file": "assets/audio/en_7.wav",
+    "description": "演唱会独白风格，感性有力"
+  },
+  "en_quiet_8": {
+    "name": "英文安静旁白",
+    "file": "assets/audio/en_8.wav",
+    "description": "安静哲思风格，适合散文旁白"
+  },
+  "jp_news_2": {
+    "name": "日文新闻女声",
+    "file": "assets/audio/jp_2.wav",
+    "description": "标准日文新闻播报"
+  }
+}
