@@ -56,7 +56,7 @@ MOSS-TTS-Nano is an open-source **multilingual tiny speech generation model** fr
   - [Supported Languages](#supported-languages)
   - [Quickstart](#quickstart)
     - [Environment Setup](#environment-setup)
-      - [Using Conda](#using-conda)
+      - [Using Pixi](#using-pixi)
     - [Voice Clone with `infer.py`](#voice-clone-with-inferpy)
     - [Local Web Demo with `app.py`](#local-web-demo-with-apppy)
     - [ONNX CPU Inference](#onnx-cpu-inference)
@@ -125,30 +125,42 @@ We recommend a clean Python environment first, then installing the project in ed
 The examples below intentionally keep arguments minimal and rely on the repository defaults.
 By default, the code loads `OpenMOSS-Team/MOSS-TTS-Nano` and `OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano`.
 
-#### Using Conda
+#### Using Pixi
+
+This project uses [pixi](https://pixi.sh) for environment and dependency management. A single command sets up everything.
 
 ```bash
-conda create -n moss-tts-nano python=3.12 -y
-conda activate moss-tts-nano
-
 git clone https://github.com/OpenMOSS/MOSS-TTS-Nano.git
 cd MOSS-TTS-Nano
 
-pip install -r requirements.txt
-pip install -e .
+pixi install
 ```
 
-If `WeTextProcessing` or `pynini` fails to install from `requirements.txt`, install `pynini` first in the same environment, then install `WeTextProcessing`, remove `WeTextProcessing` from `requirements.txt`, and finally rerun `pip install -r requirements.txt`.
+`pixi install` creates an isolated environment, installs `pynini` from conda-forge, and resolves all Python dependencies (including `WeTextProcessing`, `torch`, etc.) from PyPI.
 
-With Conda, we recommend:
+Once installed, run inference directly:
 
 ```bash
-conda install -c conda-forge pynini=2.1.6.post1 -y
-pip install git+https://github.com/WhizZest/WeTextProcessing.git
-pip install -r requirements.txt
+# Run via pixi (recommended -- auto-resolves the environment)
+pixi run python infer.py --prompt-audio-path assets/audio/zh_1.wav --text "Welcome."
+
+# Or activate an interactive shell first
+pixi shell
+python infer.py --prompt-audio-path assets/audio/zh_1.wav --text "Welcome."
+
+# Or use predefined tasks
+pixi run infer-zh
 ```
 
-If you are not using Conda, make sure you download a `pynini` wheel that matches your Python version and platform before installing `WeTextProcessing`. For a community-tested example, see [Issue #6](https://github.com/OpenMOSS/MOSS-TTS-Nano/issues/6).
+Available commands (`pixi run <task>`):
+
+| Command | Description |
+|---|---|
+| `pixi run infer` | PyTorch inference |
+| `pixi run infer-onnx` | ONNX inference |
+| `pixi run serve` | Local Web Demo |
+| `pixi run serve-onnx` | ONNX Web Demo |
+| `pixi run fm-train` | Finetuning |
 
 ### Voice Clone with `infer.py`
 
@@ -288,7 +300,7 @@ This is intended for the ONNX deployment path only. Existing prompt audio codes 
 
 ### CLI Command: `moss-tts-nano generate`
 
-After `pip install -e .`, you can call the packaged CLI directly:
+After `pixi install` (the CLI is registered automatically), you can call the packaged CLI directly:
 
 ```bash
 moss-tts-nano generate \

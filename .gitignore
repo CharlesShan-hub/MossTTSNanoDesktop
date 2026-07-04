@@ -197,5 +197,9 @@ exp_text_tokenizer
 eval_registry
 weights/tts/*.bin
 weights/tts/tokenizer.model
+models/
 generated_audio/*
+
+# pixi
+.pixi/
 .app_prompt_uploads/*

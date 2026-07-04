@@ -19,13 +19,10 @@ From the repository root:
 
 ```bash
 cd /path/to/MOSS-TTS-Nano
-pip install -r requirements.txt
+pixi install
 ```
 
-`requirements.txt` already includes:
-
-- `accelerate>=1.0.0`
-- `tqdm>=4.66.0`
+`pixi install` includes all finetuning dependencies (e.g., `accelerate`, `tqdm`). You can also run `pixi run fm-train` to execute the training script directly.
 
 ## 2. Raw JSONL Format
 

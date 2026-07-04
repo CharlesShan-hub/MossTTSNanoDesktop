@@ -19,9 +19,10 @@
 
 ```bash
 cd /path/to/MOSS-TTS-Nano
-pip install -r requirements.txt
-pip install "accelerate>=1.0.0" "tqdm>=4.66.0"
+pixi install
 ```
+
+`pixi install` 已包含 `accelerate`、`tqdm` 等所有 finetuning 依赖。也可通过 `pixi run fm-train` 一键运行训练脚本。
 
 ## 2. 原始 JSONL 格式
 

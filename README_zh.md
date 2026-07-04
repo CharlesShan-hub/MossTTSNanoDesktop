@@ -56,7 +56,7 @@ MOSS-TTS-Nano 是来自 [MOSI.AI](https://mosi.cn/#hero) 和 [OpenMOSS 团队](h
   - [支持的语言](#支持的语言)
   - [快速开始](#快速开始)
     - [环境配置](#环境配置)
-      - [使用 Conda](#使用-conda)
+      - [使用 Pixi](#使用-pixi)
     - [使用 `infer.py` 进行语音克隆](#使用-inferpy-进行语音克隆)
     - [使用 `app.py` 启动本地 Web 演示](#使用-apppy-启动本地-web-演示)
   - [ONNX CPU 版本](#onnx-cpu-版本)
@@ -122,30 +122,42 @@ MOSS-TTS-Nano 目前支持 **20 种语言**：
 
 我们建议先创建一个干净的 Python 环境，然后以可编辑模式安装项目，使得 `moss-tts-nano` 命令在本地可用。下面的示例故意保持参数最少，依赖仓库默认设置。默认情况下，代码加载 `OpenMOSS-Team/MOSS-TTS-Nano` 和 `OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano`。
 
-#### 使用 Conda
+#### 使用 Pixi
+
+项目使用 [pixi](https://pixi.sh) 管理环境与依赖，一步即可完成安装。
 
 ```bash
-conda create -n moss-tts-nano python=3.12 -y
-conda activate moss-tts-nano
-
 git clone https://github.com/OpenMOSS/MOSS-TTS-Nano.git
 cd MOSS-TTS-Nano
 
-pip install -r requirements.txt
-pip install -e .
+pixi install
 ```
 
-如果 `WeTextProcessing` 或 `pynini` 无法从 `requirements.txt` 安装，请先在同一环境中安装 `pynini`，再安装 `WeTextProcessing`，然后从 `requirements.txt` 中移除 `WeTextProcessing`，最后重新执行 `pip install -r requirements.txt`。
+`pixi install` 会自动创建隔离环境，从 conda-forge 安装 `pynini`，并从 PyPI 安装所有 Python 依赖（包括 `WeTextProcessing`、`torch` 等）。
 
-推荐优先使用 Conda：
+安装完成后即可直接运行：
 
 ```bash
-conda install -c conda-forge pynini=2.1.6.post1 -y
-pip install git+https://github.com/WhizZest/WeTextProcessing.git
-pip install -r requirements.txt
+# 方式一：通过 pixi run 运行（推荐，自动在环境中执行）
+pixi run python infer.py --prompt-audio-path assets/audio/zh_1.wav --text "欢迎使用。"
+
+# 方式二：先进入交互式 shell
+pixi shell
+python infer.py --prompt-audio-path assets/audio/zh_1.wav --text "欢迎使用。"
+
+# 方式三：使用预定义的 task
+pixi run infer-zh
 ```
 
-如果不使用 Conda，请先准备与当前 Python 版本和平台匹配的 `pynini` wheel，再安装 `WeTextProcessing`。可参考 [Issue #6](https://github.com/OpenMOSS/MOSS-TTS-Nano/issues/6) 中给出的安装示例。
+可用的预定义命令（`pixi run <task>`）：
+
+| 命令 | 说明 |
+|---|---|
+| `pixi run infer` | PyTorch 推理 |
+| `pixi run infer-onnx` | ONNX 推理 |
+| `pixi run serve` | 本地 Web Demo |
+| `pixi run serve-onnx` | ONNX Web Demo |
+| `pixi run fm-train` | 微调训练 |
 
 ### 使用 `infer.py` 进行语音克隆
 
@@ -283,7 +295,7 @@ python onnx/export_hf_to_tts_onnx.py \
 
 ### CLI 命令：`moss-tts-nano generate`
 
-安装后 `pip install -e .`，您可以直接调用打包的 CLI：
+安装后（`pixi install` 会自动注册 CLI），您可以直接调用打包的 CLI：
 
 ```bash
 moss-tts-nano generate \

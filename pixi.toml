@@ -1,0 +1,46 @@
+[workspace]
+name = "moss-tts-nano"
+version = "0.1.0"
+description = "Open-source realtime multilingual tiny TTS from OpenMOSS."
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tasks]
+infer = "python infer.py"
+infer-onnx = "python infer_onnx.py"
+serve = "python app.py"
+serve-onnx = "python app_onnx.py"
+# finetuning 子命令
+fm-prepare = "python finetuning/prepare_data.py"
+fm-train = "python finetuning/sft.py"
+fm-verify = "python finetuning/verify.py"
+
+[tasks.infer-zh]
+cmd = "python infer.py --prompt-audio-path assets/audio/zh_1.wav --text \"欢迎关注模思智能、上海创智学院与复旦大学自然语言处理实验室。\""
+
+[tasks.infer-onnx-zh]
+cmd = "python infer_onnx.py --prompt-audio-path assets/audio/zh_1.wav --text \"欢迎使用 ONNX Runtime CPU 版本。\""
+
+[tasks.fm-run]
+cmd = "bash finetuning/run_train.sh"
+
+[dependencies]
+python = ">=3.12,<3.13"
+pynini = ">=2.1.6"
+pip = "*"
+
+[pypi-dependencies]
+numpy = ">=1.24"
+fastapi = ">=0.110.0"
+python-multipart = ">=0.0.9"
+sentencepiece = ">=0.1.99"
+torch = "==2.7.0"
+torchaudio = "==2.7.0"
+transformers = "==4.57.1"
+uvicorn = ">=0.29.0"
+onnxruntime = ">=1.20.0"
+soundfile = ">=0.12"
+WeTextProcessing = ">=1.0.4.1"
+accelerate = ">=1.0.0"
+tqdm = ">=4.66.0"
+moss-tts-nano = { path = ".", editable = true }

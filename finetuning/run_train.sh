@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-CONDA_ENV_PATH="${CONDA_ENV_PATH:-}"
 MODEL_PATH="${MODEL_PATH:-${REPO_ROOT}/models/MOSS-TTS-Nano}"
 CODEC_PATH="${CODEC_PATH:-${REPO_ROOT}/models/MOSS-Audio-Tokenizer-Nano}"
 
@@ -27,22 +26,8 @@ TRAIN_ACCELERATE_ARGS=()
 PREP_EXTRA_ARGS=()
 TRAIN_EXTRA_ARGS=()
 
-if [[ -n "${CONDA_ENV_PATH}" ]]; then
-  PYTHON_BIN_DEFAULT="${CONDA_ENV_PATH}/bin/python"
-  ACCELERATE_BIN_DEFAULT="${CONDA_ENV_PATH}/bin/accelerate"
-  if [[ ! -x "${PYTHON_BIN_DEFAULT}" ]]; then
-    echo "Missing python in CONDA_ENV_PATH: ${PYTHON_BIN_DEFAULT}" >&2
-    exit 1
-  fi
-  if [[ ! -x "${ACCELERATE_BIN_DEFAULT}" ]]; then
-    echo "Missing accelerate in CONDA_ENV_PATH: ${ACCELERATE_BIN_DEFAULT}" >&2
-    exit 1
-  fi
-  export PATH="${CONDA_ENV_PATH}/bin:${PATH}"
-fi
-
-PYTHON_BIN="${PYTHON_BIN:-${PYTHON_BIN_DEFAULT:-python}}"
-ACCELERATE_BIN="${ACCELERATE_BIN:-${ACCELERATE_BIN_DEFAULT:-accelerate}}"
+PYTHON_BIN="${PYTHON_BIN:-python}"
+ACCELERATE_BIN="${ACCELERATE_BIN:-accelerate}"
 
 if [[ -n "${PREP_ACCELERATE_ARGS_STR}" ]]; then
   read -r -a PREP_ACCELERATE_ARGS <<< "${PREP_ACCELERATE_ARGS_STR}"
