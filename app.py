@@ -135,16 +135,15 @@ def _load_voices_manifest() -> dict[str, dict[str, str]]:
         if not isinstance(info, dict):
             continue
         file_path = str(info.get("file", "")).strip()
-        name = str(info.get("name", "")).strip()
-        if not file_path or not name:
+        if not file_path:
             continue
         resolved = (APP_DIR / file_path).resolve()
         if not resolved.is_file():
             logging.warning("voice file not found: %s (voice_id=%s)", resolved, voice_id)
             continue
         validated[voice_id] = {
-            "name": name,
             "file": file_path,
+            "language": str(info.get("language", "")).strip(),
             "description": str(info.get("description", "")).strip(),
         }
     return validated
@@ -1108,6 +1107,13 @@ def _render_index_html(
     <div class="grid">
       <div class="panel input-panel">
         <div class="field">
+          <label for="voice">预制语音</label>
+          <select id="voice">
+            <option value="">无（使用 Demo 或上传音频）</option>
+          </select>
+        </div>
+
+        <div class="field">
           <label for="demo">Demo</label>
           <select id="demo"></select>
         </div>
@@ -1287,6 +1293,7 @@ def _render_index_html(
     const DEFAULT_CPU_THREADS = __DEFAULT_CPU_THREADS__;
 
     const demoSelect = document.getElementById("demo");
+    const voiceSelect = document.getElementById("voice");
     const promptAudioUploadInput = document.getElementById("prompt-audio-upload");
     const promptAudioPreview = document.getElementById("prompt-audio-preview");
     const promptAudioSource = document.getElementById("prompt-audio-source");
@@ -1337,6 +1344,40 @@ def _render_index_html(
       demoSelect.appendChild(option);
     }
     document.getElementById("attn-implementation").value = DEFAULT_ATTN_IMPLEMENTATION;
+
+    // Populate voice selector grouped by language
+    fetch(`${APP_BASE}/api/voices`)
+      .then(r => r.json())
+      .then(data => {
+        const groups = {};
+        for (const v of data.voices || []) {
+          const lang = v.language || "其他";
+          if (!groups[lang]) groups[lang] = [];
+          groups[lang].push(v);
+        }
+        for (const [lang, items] of Object.entries(groups)) {
+          const group = document.createElement("optgroup");
+          group.label = lang;
+          for (const v of items) {
+            const opt = document.createElement("option");
+            opt.value = v.id;
+            opt.textContent = v.name + (v.description ? ` — ${v.description}` : "");
+            group.appendChild(opt);
+          }
+          voiceSelect.appendChild(group);
+        }
+      })
+      .catch(() => {});
+
+    // Voice selection clears demo and uploaded audio
+    voiceSelect.addEventListener("change", () => {
+      if (voiceSelect.value) {
+        demoSelect.value = "";
+        promptAudioUploadInput.value = "";
+        clearPromptAudioPreviewUrl();
+        showPromptAudioFilePicker("使用预制语音，无需上传参考音频。");
+      }
+    });
 
     function getSelectedDemo() {
       return demosById.get(demoSelect.value) || DEMOS[0] || null;
@@ -1731,7 +1772,9 @@ def _render_index_html(
       const uploadedPromptAudio = getUploadedPromptAudioFile();
       const formData = new FormData();
       formData.append("text", textInput.value);
-      if (demo) {
+      if (voiceSelect.value) {
+        formData.append("voice_name", voiceSelect.value);
+      } else if (demo) {
         formData.append("demo_id", demo.id);
       }
       if (uploadedPromptAudio) {
@@ -2133,6 +2176,7 @@ def _render_index_html(
 
     generateBtn.addEventListener("click", generate);
     demoSelect.addEventListener("change", async () => {
+      voiceSelect.value = "";
       await closeRealtimeStream();
       clearAudioOutput();
       applySelectedDemo(true);
@@ -2142,6 +2186,7 @@ def _render_index_html(
       setStatus(runStatus, "Idle.");
     });
     promptAudioUploadInput.addEventListener("change", () => {
+      voiceSelect.value = "";
       applySelectedDemo(false);
       clearNormalizedOutputs();
       resolvedPrompt.textContent = "";
@@ -2152,6 +2197,7 @@ def _render_index_html(
     });
     clearPromptAudioBtn.addEventListener("click", () => {
       promptAudioUploadInput.value = "";
+      voiceSelect.value = "";
       applySelectedDemo(false);
       clearNormalizedOutputs();
       resolvedPrompt.textContent = "";
@@ -2536,8 +2582,9 @@ def _build_app(
             "voices": [
                 {
                     "id": voice_id,
-                    "name": info["name"],
+                    "name": voice_id,
                     "file": info["file"],
+                    "language": info["language"],
                     "description": info["description"],
                 }
                 for voice_id, info in voices_manifest.items()
@@ -2561,6 +2608,7 @@ def _build_app(
     @app.post("/api/generate-stream/start")
     async def generate_stream_start(
         text: str = Form(...),
+        voice_name: str = Form(""),
         demo_id: str = Form(""),
         prompt_audio: UploadFile | None = File(None),
         max_new_frames: int = Form(375),
@@ -2803,12 +2851,22 @@ def _build_app(
         audio_repetition_penalty: float = Form(1.2),
         seed: str = Form("0"),
     ):
-        try:
-            demo_entry, prompt_audio_path, prompt_audio_display_path, prompt_audio_cleanup_path = (
-                await _resolve_prompt_audio_request(demo_id=demo_id, prompt_audio=prompt_audio)
-            )
-        except ValueError as exc:
-            return JSONResponse(status_code=400, content={"error": str(exc)})
+        voice_name = str(voice_name or "").strip()
+        if voice_name:
+            voice_info = voices_manifest.get(voice_name)
+            if voice_info is None:
+                return JSONResponse(status_code=400, content={"error": f"Unknown voice_name: {voice_name}. Use GET /api/voices to list available voices."})
+            prompt_audio_path = str((APP_DIR / voice_info["file"]).resolve())
+            prompt_audio_display_path = voice_info["file"]
+            prompt_audio_cleanup_path = None
+            demo_entry = None
+        else:
+            try:
+                demo_entry, prompt_audio_path, prompt_audio_display_path, prompt_audio_cleanup_path = (
+                    await _resolve_prompt_audio_request(demo_id=demo_id, prompt_audio=prompt_audio)
+                )
+            except ValueError as exc:
+                return JSONResponse(status_code=400, content={"error": str(exc)})
 
         resolved_text = str(text or "").strip() or (demo_entry.text if demo_entry is not None else "")
         if not resolved_text:

@@ -361,49 +361,7 @@ This command forwards to the corresponding web app, keeps the model loaded in me
 
 ### HTTP API
 
-After starting the demo server (`pixi run serve` or `pixi run serve-onnx`), you can use the HTTP API for speech synthesis:
-
-**List available preset voices**
-
-```bash
-curl http://localhost:18083/api/voices
-```
-
-Example response:
-
-```json
-{
-  "voices": [
-    {"id": "zh_female_1", "name": "中文女声", "file": "assets/audio/zh_1.wav", "description": "标准中文女声，适合朗读"},
-    {"id": "en_news_4", "name": "英文新闻女声", "file": "assets/audio/en_4.wav", "description": "标准英文新闻播报"}
-  ]
-}
-```
-
-**Option 1: Synthesize with a preset voice (recommended)**
-
-```bash
-curl -s -X POST http://localhost:18083/api/generate \
-  -F "voice_name=zh_female_1" \
-  -F "text=第一章。在很久很久以前，有一座大山，山脚下住着一位老爷爷。" \
-  | python3 -c "
-import sys, json, base64
-data = json.load(sys.stdin)
-with open('chapter1.wav', 'wb') as f:
-    f.write(base64.b64decode(data['audio_base64']))
-print('Saved: chapter1.wav')
-"
-```
-
-**Option 2: Upload your own reference audio**
-
-```bash
-curl -X POST http://localhost:18083/api/generate \
-  -F "text=Hello, this is my voice clone." \
-  -F "prompt_audio=@my_voice.wav"
-```
-
-All methods support automatic chunked voice cloning for long text, and return `48kHz` stereo WAV audio (base64 encoded).
+See [API.md](API.md) for the HTTP API documentation.
 
 For server deployment with paged KV cache, streaming, and an OpenAI-compatible `/v1/audio/speech` endpoint, please read the [vLLM-Omni MOSS-TTS-Nano README](https://github.com/vllm-project/vllm-omni/blob/main/examples/online_serving/moss_tts_nano/README.md).
 
