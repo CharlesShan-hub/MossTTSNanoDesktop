@@ -170,8 +170,7 @@ async function loadVoices() {
     setStatus(t("app.loadFailed"), true);
   }
 }
-window.MOSS.loadVoices = loadVoices;  // voices.js 会增强此函数
-window.MOSS.baseLoadVoices = loadVoices;
+window.MOSS.loadVoices = loadVoices;  // voices.js 会完全替换此函数
 
 // ─── Tab 切换 ──────────────────────────────────────────────────────────
 tabs.forEach(t => {
@@ -402,8 +401,9 @@ function applyLang() {
   // Setting items by ID
   const settingLabels = {
     "close-to-tray": ["closeToTray", "closeToTrayDesc"],
-    "default-voice": ["defaultVoice", "defaultVoiceDesc"],
     "lang-select": ["langTitle", "langDesc"],
+    "default-voice": ["defaultVoice", "defaultVoiceDesc"],
+    "debug-toggle": ["debug", "debugDesc"],
     "anim-bg-toggle": ["animBg", "animBgDesc"],
     "orb-opacity": ["orbOpacity", "orbOpacityDesc"],
     "dark-mode-toggle": ["darkMode", "darkModeDesc"],
@@ -439,6 +439,7 @@ langSelect.addEventListener("change", async () => {
 // ─── 设置处理 ──────────────────────────────────────────────────────────
 document.getElementById("close-to-tray")?.addEventListener("change", () => { window.mossTTS.setSettings({ closeToTray: document.getElementById("close-to-tray").checked }).catch(() => {}); });
 document.getElementById("default-voice")?.addEventListener("change", () => { window.mossTTS.setSettings({ defaultVoice: document.getElementById("default-voice").value }).catch(() => {}); });
+document.getElementById("debug-toggle")?.addEventListener("change", () => { window.mossTTS.setSettings({ debug: document.getElementById("debug-toggle").checked }).catch(() => {}); });
 
 const animBg = document.getElementById("anim-bg");
 const animBgToggle = document.getElementById("anim-bg-toggle");
@@ -480,7 +481,6 @@ setServerOnline = function(ok) { dot.className = "titlebar-dot" + (ok ? "" : " o
 // ─── 暴露给子模块（voices.js） ──────────────────────────────────
 Object.assign(window.MOSS, {
   $, t, setStatus, base64ToBlob, formatCount,
-  loadVoices, baseLoadVoices: loadVoices,
 });
 Object.defineProperty(window.MOSS, "API", { get: () => API });
 
@@ -492,6 +492,7 @@ async function initApp() {
     if (s.runtime && document.getElementById("runtime-select")) document.getElementById("runtime-select").value = s.runtime;
     if (s.defaultVoice && document.getElementById("default-voice")) document.getElementById("default-voice").value = s.defaultVoice;
     if (s.closeToTray !== undefined && document.getElementById("close-to-tray")) document.getElementById("close-to-tray").checked = s.closeToTray;
+    if (s.debug !== undefined && document.getElementById("debug-toggle")) document.getElementById("debug-toggle").checked = s.debug;
     const animOn = s.animBg !== false;
     if (document.getElementById("anim-bg-toggle")) document.getElementById("anim-bg-toggle").checked = animOn;
     if (animOn) document.getElementById("anim-bg")?.classList.add("on");

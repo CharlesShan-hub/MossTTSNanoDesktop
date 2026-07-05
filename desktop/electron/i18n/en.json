@@ -125,6 +125,8 @@
     "closeToTrayDesc": "Keep running in the system tray when closing the window",
     "defaultVoice": "Default Voice",
     "defaultVoiceDesc": "Default voice selected on startup",
+    "debug": "Debug Mode",
+    "debugDesc": "Open DevTools to view console logs",
     "noDefault": "None",
     "runtimeTitle": "Inference Engine",
     "runtimeDesc": "Select the model runtime backend",

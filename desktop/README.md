@@ -8,16 +8,24 @@ MOSS-TTS-Nano 的桌面应用打包工具，支持 macOS 和 Windows。
 desktop/
 ├── electron/           ← Electron 桌面壳
 │   ├── package.json    ← 依赖 & electron-builder 配置
-│   ├── main.js         ← 主进程（服务管理、系统托盘、窗口）
-│   ├── preload.js      ← 预加载脚本
-│   ├── index.html      ← 启动页（内嵌 Web 界面前）
-│   └── icons/          ← 应用图标
+│   ├── main.js         ← 主进程（IPC、窗口、托盘）
+│   ├── server.js       ← 后端服务管理（启停、端口、健康检测）
+│   ├── preload.js      ← 预加载桥
+│   ├── app.js          ← 前端核心（生成、有声书、设置、i18n）
+│   ├── voices.js       ← 音色管理（网格、导入/编辑/删除）
+│   ├── index.html      ← 主界面
+│   ├── style.css       ← 全部样式（玻璃面板、动画、暗黑模式）
+│   ├── version.json    ← 统一版本号
+│   ├── i18n/           ← 中/英文翻译
+│   ├── icons/          ← 应用图标
+│   └── entitlements.mac.plist  ← macOS 沙箱权限
 ├── scripts/            ← 构建脚本
 │   ├── build-server.sh ← PyInstaller 打包 Python 后端
 │   ├── build-mac.sh    ← macOS 完整构建（.dmg）
+│   ├── build-linux.sh  ← Linux 完整构建（.AppImage）
 │   └── build-win.bat   ← Windows 完整构建（.exe）
-├── binaries/           ← 构建产物（gitignored）
-└── dist/               ← Electron 安装包输出（gitignored）
+├── binaries/           ← 后端二进制（gitignored）
+└── dist/               ← Electron 安装包（gitignored）
 ```
 
 ## 构建流程

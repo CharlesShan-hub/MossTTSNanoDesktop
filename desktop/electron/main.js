@@ -47,7 +47,7 @@ const RESOURCES = {
 const DEFAULT_SETTINGS = {
   lang: "zh", runtime: "onnx", defaultVoice: "",
   closeToTray: true, animBg: true, darkMode: false,
-  autoStart: true, serverPort: 18083,
+  autoStart: true, serverPort: 18083, debug: false,
 };
 
 // ─── 设置读写 ──────────────────────────────────────────────────────────────
@@ -151,6 +151,11 @@ function registerIpcHandlers() {
       server.startServer(RESOURCES.root, app.isPackaged);
       try { await server.waitForServer(45000); } catch (_) {}
     }
+    // Handle debug toggle
+    if (partial.debug !== undefined && mainWindow) {
+      if (partial.debug) mainWindow.webContents.openDevTools();
+      else mainWindow.webContents.closeDevTools();
+    }
     return { success: true };
   });
 
@@ -190,6 +195,13 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "index.html"));
+
+  // Apply initial debug state
+  try {
+    const { debug } = loadSettings();
+    if (debug) mainWindow.webContents.openDevTools();
+  } catch (_) {}
+
   mainWindow.on("close", (event) => {
     if (!server.getQuitting()) { event.preventDefault(); mainWindow.hide(); }
   });

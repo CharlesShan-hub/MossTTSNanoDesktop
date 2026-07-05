@@ -125,6 +125,8 @@
     "closeToTrayDesc": "点击红色 × 不退出应用，保留在托盘",
     "defaultVoice": "默认音色",
     "defaultVoiceDesc": "启动后自动选中的音色",
+    "debug": "调试模式",
+    "debugDesc": "打开开发者工具，查看控制台日志",
     "noDefault": "无默认",
     "runtimeTitle": "推理引擎",
     "runtimeDesc": "选择模型运行时后端",
