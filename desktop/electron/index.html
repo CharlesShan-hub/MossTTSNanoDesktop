@@ -15,13 +15,15 @@
     <div class="wave"></div>
     <div class="wave"></div>
   </div>
+  <!-- 暗黑模式底图层 -->
+  <div class="dark-bg" id="dark-bg"></div>
 
   <!-- 标题栏 -->
   <div class="titlebar">
     <span class="titlebar-title">CTTS</span>
     <span class="titlebar-status">
       <span class="titlebar-dot loading" id="dot"></span>
-      <span id="dot-text">连接中...</span>
+      <span id="dot-text">加载中...</span>
     </span>
   </div>
 
@@ -41,7 +43,7 @@
       <div class="sidebar">
         <div class="sidebar-group">
           <label for="voice">音色</label>
-          <select id="voice"><option value="">加载中...</option></select>
+          <select id="voice"><option value="" id="voice-loading-opt">加载中...</option></select>
         </div>
         <div class="sidebar-divider"></div>
         <div>
@@ -129,7 +131,7 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-group">
           <label id="preview-text-label" style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">试听文字</label>
-          <input type="text" id="preview-text" value="你好，这是音色试听示例。" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;">
+          <input type="text" id="preview-text" placeholder="你好，这是音色试听示例。" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;">
         </div>
         <div class="sidebar-divider"></div>
         <div class="sidebar-group">
@@ -148,7 +150,7 @@
         <div class="sidebar-group">
           <label id="about-label">关于</label>
           <p id="about-text" style="font-size:11px;color:var(--text-muted);line-height:1.5;">CTTS v1.0.0<br>基于 MOSS-TTS-Nano 开发<br>后端: <span id="settings-backend">检测中...</span></p>
-          <a href="#" id="repo-link" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:16px;border:1.5px solid var(--border);font-size:12px;color:var(--accent);text-decoration:none;transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">GitHub 仓库</a>
+          <a href="#" id="repo-link" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:16px;border:1.5px solid var(--border);font-size:12px;color:var(--accent);text-decoration:none;transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"><span id="repo-link-text"></span></a>
         </div>
       </div>
       <div class="content">
@@ -159,6 +161,7 @@
           <div class="setting-item"><div><div class="setting-label">推理引擎</div><div class="setting-desc" id="runtime-desc">ONNX Runtime（CPU 优化，启动快）</div></div><select id="runtime-select" class="setting-select"><option value="onnx">ONNX</option><option value="pytorch">PyTorch（MPS/CUDA）</option></select></div>
           <div class="setting-item"><div><div class="setting-label">界面语言</div><div class="setting-desc" id="lang-desc">切换界面显示语言</div></div><select id="lang-select" class="setting-select"><option value="zh">中文</option><option value="en">English</option></select></div>
           <div class="setting-item"><div><div class="setting-label">动态背景</div><div class="setting-desc">显示浮动光球和波浪动画</div></div><input type="checkbox" id="anim-bg-toggle"></div>
+          <div class="setting-item"><div><div class="setting-label">光球强度</div><div class="setting-desc">光球在背景中的可见程度</div></div><input type="number" id="orb-opacity" min="0" max="1" step="0.05" value="0.5" list="orb-opts" class="setting-select" style="width:120px;"><datalist id="orb-opts"><option value="0.3"><option value="0.4"><option value="0.5"><option value="0.6"><option value="0.7"><option value="0.8"></datalist></div>
           <div class="setting-item"><div><div class="setting-label">暗黑模式</div><div class="setting-desc" id="dark-mode-desc">深色背景，护眼省电</div></div><input type="checkbox" id="dark-mode-toggle"></div>
         </div>
       </div>

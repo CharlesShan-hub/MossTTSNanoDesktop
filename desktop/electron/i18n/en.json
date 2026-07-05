@@ -1,7 +1,7 @@
 {
   "app": {
     "appName": "MOSS-TTS-Nano",
-    "loading": "Connecting...",
+    "loading": "Loading...",
     "online": "Server running",
     "offline": "Server offline",
     "reconnecting": "Server offline, reconnecting...",
@@ -119,6 +119,7 @@
     "voiceLabel": "Voice",
     "about": "About",
     "backend": "Backend: ",
+    "backendChecking": "Checking...",
     "version": "MOSS-TTS-Nano v1.0.0",
     "startup": "Auto-start at login",
     "startupDesc": "Automatically start the TTS service at login",
@@ -143,7 +144,10 @@
     "langEn": "English",
     "animBg": "Animated Background",
     "animBgDesc": "Show floating orbs and wave animation",
+    "orbOpacity": "Orb Intensity",
+    "orbOpacityDesc": "Visibility of background orbs",
     "darkMode": "Dark Mode",
-    "darkModeDesc": "Dark background, easier on the eyes"
+    "darkModeDesc": "Dark background, easier on the eyes",
+    "repoLink": "GitHub Repository"
   }
 }

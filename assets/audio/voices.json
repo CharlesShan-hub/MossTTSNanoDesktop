@@ -34,20 +34,6 @@
     "description": "冷静自述风格，适合内心独白",
     "hidden": true
   },
-  "en_female_4": {
-    "name": "英文新闻女声",
-    "file": "assets/audio/en_4.wav",
-    "language": "英文",
-    "description": "标准英文新闻播报",
-    "hidden": true
-  },
-  "en_male_2": {
-    "name": "英文讲述男声",
-    "file": "assets/audio/en_2.wav",
-    "language": "英文",
-    "description": "沉稳英文讲述，适合知识内容",
-    "hidden": true
-  },
   "en_female_3": {
     "name": "英文温柔女声",
     "file": "assets/audio/en_3.wav",
@@ -88,7 +74,7 @@
     "file": "assets/audio/zh_1.wav",
     "language": "中文",
     "description": "标准中文男声，适合朗读",
-    "hidden": true
+    "hidden": false
   },
   "voice_1783232117": {
     "name": "龙安洋",
@@ -704,6 +690,20 @@
     "file": "assets/audio/4401395053b2.0",
     "language": "中文",
     "description": "特质：精准干练女；年龄：25~30岁；场景：新闻播报",
+    "hidden": true
+  },
+  "voice_1783251913": {
+    "name": "英文讲述女声",
+    "file": "assets/audio/en_2.wav",
+    "language": "英文",
+    "description": "沉稳英文讲述，适合知识内容",
+    "hidden": true
+  },
+  "voice_1783251920": {
+    "name": "英文新闻男声",
+    "file": "assets/audio/en_4.wav",
+    "language": "英文",
+    "description": "标准英文新闻播报",
     "hidden": true
   }
 }

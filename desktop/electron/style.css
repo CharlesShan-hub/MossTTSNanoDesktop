@@ -251,57 +251,76 @@ body {
 .anim-bg.on { opacity: 1; }
 .anim-bg .orb {
   position: absolute; border-radius: 50%;
-  filter: blur(80px); opacity: 0.35;
+  filter: blur(80px);
   animation: float 18s ease-in-out infinite;
 }
 .anim-bg .orb:nth-child(1) {
-  width: 300px; height: 300px;
+  width: 280px; height: 280px;
   background: radial-gradient(circle, var(--accent), transparent);
-  top: 10%; left: -5%;
-  animation-delay: 0s;
+  top: 10%; left: 5%;
+  animation-name: float1;
 }
 .anim-bg .orb:nth-child(2) {
-  width: 250px; height: 250px;
+  width: 220px; height: 220px;
   background: radial-gradient(circle, var(--accent), transparent);
-  bottom: 15%; right: -3%;
+  bottom: 20%; right: 8%;
+  animation-name: float2;
   animation-delay: -6s;
 }
 .anim-bg .orb:nth-child(3) {
-  width: 200px; height: 200px;
+  width: 180px; height: 180px;
   background: radial-gradient(circle, var(--accent), transparent);
-  top: 60%; left: 40%;
+  top: 55%; left: 45%;
+  animation-name: float3;
   animation-delay: -12s;
 }
-@keyframes float {
+@keyframes float1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -40px) scale(1.1); }
-  50% { transform: translate(-20px, 20px) scale(0.9); }
-  75% { transform: translate(40px, 30px) scale(1.05); }
+  20% { transform: translate(40px, -50px) scale(1.15); }
+  40% { transform: translate(-30px, 30px) scale(0.9); }
+  60% { transform: translate(60px, 20px) scale(1.1); }
+  80% { transform: translate(-40px, -20px) scale(0.95); }
+}
+@keyframes float2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-50px, 30px) scale(1.2); }
+  50% { transform: translate(30px, -60px) scale(0.85); }
+  75% { transform: translate(-20px, 40px) scale(1.05); }
+}
+@keyframes float3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  20% { transform: translate(30px, 40px) scale(0.9); }
+  40% { transform: translate(-60px, -30px) scale(1.2); }
+  60% { transform: translate(-10px, 50px) scale(0.95); }
+  80% { transform: translate(50px, -20px) scale(1.1); }
 }
 
 /* ─── 波浪 ─────────────────────────────────────────── */
 .anim-bg .wave {
-  position: absolute; bottom: 0; left: 0; width: 200%; height: 120px;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px, transparent 40px,
-    rgba(255,255,255,0.08) 40px, rgba(255,255,255,0.08) 80px
-  );
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z' fill='white'/%3E%3C/svg%3E");
-  mask-size: 1200px 120px;
+  position: absolute; bottom: 0; left: 0; width: 300%; height: 100px;
+  background: rgba(255,255,255,0.06);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,100 C150,100 200,20 300,20 C400,20 450,80 550,80 C650,80 700,20 800,20 C900,20 950,80 1050,80 C1100,80 1150,100 1200,100 L1200,100 L0,100 Z' fill='white'/%3E%3C/svg%3E");
+  mask-size: 1200px 100px;
   mask-repeat: repeat-x;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z' fill='white'/%3E%3C/svg%3E");
-  -webkit-mask-size: 1200px 120px;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 100'%3E%3Cpath d='M0,100 C150,100 200,20 300,20 C400,20 450,80 550,80 C650,80 700,20 800,20 C900,20 950,80 1050,80 C1100,80 1150,100 1200,100 L1200,100 L0,100 Z' fill='white'/%3E%3C/svg%3E");
+  -webkit-mask-size: 1200px 100px;
   -webkit-mask-repeat: repeat-x;
-  animation: waveMove 8s linear infinite;
-  opacity: 0.3;
+  animation: waveMove 10s linear infinite;
+  opacity: 0.35;
 }
-.anim-bg .wave:nth-child(4) { bottom: 0; animation-duration: 10s; opacity: 0.2; mask-image: none; background: repeating-linear-gradient(90deg, transparent 0px, transparent 30px, rgba(255,255,255,0.06) 30px, rgba(255,255,255,0.06) 60px); }
-@keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.anim-bg .wave:nth-child(4) { bottom: 0; animation-duration: 15s; opacity: 0.18; background: rgba(255,255,255,0.04); }
+@keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
 
 /* ─── 暗黑模式 ─────────────────────────────────────────── */
+.dark-bg {
+  position: fixed; inset: 0; z-index: -1;
+  background: transparent;
+  transition: background 0.4s;
+}
+.dark-mode .dark-bg {
+  background: #1c1c1e;
+}
 .dark-mode {
-  --bg: #1c1c1e;
   --surface: #2c2c2e;
   --border: #3a3a3c;
   --border-light: #3a3a3c;
@@ -309,11 +328,10 @@ body {
   --text-secondary: #a1a1a6;
   --text-muted: #636366;
 }
-.dark-mode body { background: var(--bg); }
-.dark-mode .titlebar { background: var(--bg); }
-.dark-mode .tabs { background: var(--bg); }
+.dark-mode .titlebar { background: transparent; border-bottom-color: var(--border-light); }
+.dark-mode .tabs { background: transparent; border-bottom-color: var(--border-light); }
 .dark-mode .sidebar { background: var(--surface); }
-.dark-mode .content { background: var(--bg); }
+.dark-mode .content { background: transparent; }
 .dark-mode .voice-card,
 .dark-mode .book-item,
 .dark-mode .player,
@@ -329,10 +347,10 @@ body {
 .dark-mode .setting-item input[type="checkbox"] { accent-color: var(--accent); }
 .dark-mode .text-wrap textarea { background: #1c1c1e; }
 .dark-mode .voice-card .lang-tag { background: #3a3a3c; color: var(--text-muted); }
-.dark-mode .statusbar { background: var(--bg); }
+.dark-mode .statusbar { background: transparent; }
 .dark-mode #import-file, .dark-mode #edit-file { background: #1c1c1e !important; }
-.dark-mode .anim-bg .orb { opacity: 0.55; }
 .dark-mode .anim-bg .wave { opacity: 0.5; }
+.dark-mode .anim-bg .orb { filter: blur(100px); opacity: 0.7 !important; }
 .dark-mode audio::-webkit-media-controls-panel { background: #2c2c2e; }
 .dark-mode audio::-webkit-media-controls-current-time-display,
 .dark-mode audio::-webkit-media-controls-time-remaining-display { color: #f5f5f7; }

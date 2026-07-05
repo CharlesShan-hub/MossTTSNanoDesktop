@@ -1,7 +1,7 @@
 {
   "app": {
     "appName": "MOSS-TTS-Nano",
-    "loading": "连接中...",
+    "loading": "加载中...",
     "online": "服务运行中",
     "offline": "服务离线",
     "reconnecting": "服务离线，等待重新连接...",
@@ -119,6 +119,7 @@
     "voiceLabel": "音色",
     "about": "关于",
     "backend": "后端: ",
+    "backendChecking": "检测中...",
     "version": "MOSS-TTS-Nano v1.0.0",
     "startup": "开机自动启动服务",
     "startupDesc": "登录时自动在后台启动语音合成服务",
@@ -143,7 +144,10 @@
     "langEn": "English",
     "animBg": "动态背景",
     "animBgDesc": "显示浮动光球和波浪动画",
+    "orbOpacity": "光球强度",
+    "orbOpacityDesc": "光球在背景中的可见程度",
     "darkMode": "暗黑模式",
-    "darkModeDesc": "深色背景，护眼省电"
+    "darkModeDesc": "深色背景，护眼省电",
+    "repoLink": "GitHub 仓库"
   }
 }

@@ -288,6 +288,11 @@ function renderBookList() {
 // ─── 音色管理 ────────────────────────────────────────────────────────────
 let allVoices = [];
 let editingVoiceId = null, deletingVoiceId = null;
+let _currentAudio = null;
+
+function _stopCurrentAudio() {
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+}
 
 function renderVoiceGrid() {
   const grid = $("#voice-grid");
@@ -357,9 +362,11 @@ async function previewVoice(id, btn) {
     const data = await r.json();
     if (data.audio_base64) {
       const blob = base64ToBlob(data.audio_base64, "audio/wav");
+      _stopCurrentAudio();
       const a = new Audio(URL.createObjectURL(blob));
+      _currentAudio = a;
       a.play().catch(() => {}); setStatus(t("voices.previewPlaying"));
-      a.onended = () => setStatus(t("voices.previewEnded"));
+      a.onended = () => { setStatus(t("voices.previewEnded")); if (_currentAudio === a) _currentAudio = null; };
     }
   } catch (e) { setStatus(t("voices.previewFailed") + e.message, true); }
   btn.disabled = false; btn.textContent = "▶";
@@ -370,9 +377,11 @@ async function listenVoice(id) {
     const r = await fetch(API + "/api/voices/" + encodeURIComponent(id) + "/audio");
     if (!r.ok) { setStatus(t("voices.listenFailed") + "404", true); return; }
     const blob = await r.blob();
+    _stopCurrentAudio();
     const a = new Audio(URL.createObjectURL(blob));
+    _currentAudio = a;
     a.play().catch(() => {}); setStatus(t("voices.listenRef"));
-    a.onended = () => setStatus(t("voices.listenEnded"));
+    a.onended = () => { setStatus(t("voices.listenEnded")); if (_currentAudio === a) _currentAudio = null; };
   } catch (e) { setStatus(t("voices.listenFailed") + e.message, true); }
 }
 
@@ -571,10 +580,19 @@ function applyLang() {
   if (tipEl) tipEl.textContent = t("voices.tip");
   const previewLabel = document.getElementById("preview-text-label");
   if (previewLabel) previewLabel.textContent = t("voices.previewLabel");
+  const previewInput = document.getElementById("preview-text");
+  if (previewInput) previewInput.placeholder = t("single.previewText");
+  const loadingOpt = document.getElementById("voice-loading-opt");
+  if (loadingOpt) loadingOpt.textContent = t("app.loading");
+  // Update dot-text if still showing initial loading state
+  const dt = document.getElementById("dot-text");
+  if (dt && dt.textContent.match(/加载中|Loading/)) dt.textContent = t("app.loading");
   // ── Settings tab ──
   document.querySelector("#settings-section-label").textContent = t("settings.preferences");
   document.querySelector("#about-label").textContent = t("settings.about");
-  document.querySelector("#about-text").innerHTML = t("settings.version") + "<br>" + t("settings.backend") + '<span id="settings-backend">检测中...</span>';
+  document.querySelector("#about-text").innerHTML = t("settings.version") + "<br>" + t("settings.backend") + '<span id="settings-backend">' + (settingsBackend?.textContent || t("settings.backendChecking")) + '</span>';
+  const repoLinkText = document.getElementById("repo-link-text");
+  if (repoLinkText) repoLinkText.textContent = t("settings.repoLink");
   const s1 = document.querySelector(".setting-item:nth-child(1) .setting-label");
   const s1d = document.querySelector(".setting-item:nth-child(1) .setting-desc");
   if (s1) s1.textContent = t("settings.startup");
@@ -600,9 +618,13 @@ function applyLang() {
   if (s6) s6.textContent = t("settings.animBg");
   if (s6d) s6d.textContent = t("settings.animBgDesc");
   const s7 = document.querySelector(".setting-item:nth-child(7) .setting-label");
-  const s7d = document.getElementById("dark-mode-desc");
-  if (s7) s7.textContent = t("settings.darkMode");
-  if (s7d) s7d.textContent = t("settings.darkModeDesc");
+  const s7d = document.querySelector(".setting-item:nth-child(7) .setting-desc");
+  if (s7) s7.textContent = t("settings.orbOpacity");
+  if (s7d) s7d.textContent = t("settings.orbOpacityDesc");
+  const s8 = document.querySelector(".setting-item:nth-child(8) .setting-label");
+  const s8d = document.getElementById("dark-mode-desc");
+  if (s8) s8.textContent = t("settings.darkMode");
+  if (s8d) s8d.textContent = t("settings.darkModeDesc");
   // Update runtime desc too
   if (runtimeSelect) updateRuntimeDesc(runtimeSelect.value);
   // Modal placeholders
@@ -630,6 +652,20 @@ if (animBgToggle) {
   animBgToggle.addEventListener("change", () => {
     animBg.classList.toggle("on", animBgToggle.checked);
     window.mossTTS.setSettings({ animBg: animBgToggle.checked }).catch(() => {});
+  });
+}
+
+// Orb opacity
+const orbOpacityInput = document.getElementById("orb-opacity");
+function applyOrbOpacity(val) {
+  const v = parseFloat(val);
+  if (isNaN(v)) return;
+  document.querySelectorAll(".anim-bg .orb").forEach(el => el.style.opacity = v);
+}
+if (orbOpacityInput) {
+  orbOpacityInput.addEventListener("change", () => {
+    applyOrbOpacity(orbOpacityInput.value);
+    window.mossTTS.setSettings({ orbOpacity: orbOpacityInput.value }).catch(() => {});
   });
 }
 
@@ -665,6 +701,11 @@ async function initApp() {
     const animOn = s.animBg !== false;
     if (document.getElementById("anim-bg-toggle")) document.getElementById("anim-bg-toggle").checked = animOn;
     if (animOn) document.getElementById("anim-bg")?.classList.add("on");
+    // Orb opacity
+    if (s.orbOpacity && document.getElementById("orb-opacity")) {
+      document.getElementById("orb-opacity").value = s.orbOpacity;
+      applyOrbOpacity(s.orbOpacity);
+    }
     // Dark mode
     if (s.darkMode) {
       document.getElementById("dark-mode-toggle").checked = true;
