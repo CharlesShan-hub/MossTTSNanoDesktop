@@ -123,7 +123,7 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-group">
           <label>筛选</label>
-          <input type="text" id="voice-search" placeholder="搜索音色名称..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;margin-bottom:6px;" onfocus="if(this.style.outline)this.style.outline='none'">
+          <input type="text" id="voice-search" placeholder="搜索音色名称..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;margin-bottom:6px;">
           <select id="voice-lang-filter" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;">
             <option value="">全部语言</option>
           </select>
@@ -144,25 +144,41 @@
 
     <!-- 设置 -->
     <div class="tab-layout" id="tab-settings" data-theme="settings">
-      <div class="sidebar">
-        <div class="sidebar-group"><label id="settings-section-label">偏好设置</label></div>
-        <div class="sidebar-divider"></div>
-        <div class="sidebar-group">
+      <div class="sidebar" id="settings-sidebar">
+        <div>
+          <div class="settings-tabs">
+            <div class="settings-tab active" data-stab="general">通用</div>
+            <div class="settings-tab" data-stab="appearance">外观</div>
+            <div class="settings-tab" data-stab="engine">引擎</div>
+          </div>
+        </div>
+        <div class="settings-about">
+          <div class="sidebar-divider"></div>
           <label id="about-label">关于</label>
           <p id="about-text" style="font-size:11px;color:var(--text-muted);line-height:1.5;">CTTS v1.0.0<br>基于 MOSS-TTS-Nano 开发<br>后端: <span id="settings-backend">检测中...</span></p>
-          <a href="#" id="repo-link" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:16px;border:1.5px solid var(--border);font-size:12px;color:var(--accent);text-decoration:none;transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"><span id="repo-link-text"></span></a>
+          <a href="#" id="repo-link" style="display:inline-block;margin-top:8px;padding:6px 14px;border-radius:16px;border:1.5px solid var(--border);font-size:12px;color:var(--accent);text-decoration:none;transition:all 0.12s;"><span id="repo-link-text"></span></a>
         </div>
       </div>
       <div class="content">
-        <div class="settings-list">
-          <div class="setting-item"><div><div class="setting-label">开机自动启动服务</div><div class="setting-desc">登录时自动在后台启动语音合成服务</div></div><input type="checkbox" id="auto-start"></div>
-          <div class="setting-item"><div><div class="setting-label">关闭窗口时最小化到托盘</div><div class="setting-desc">点击红色 × 不退出应用，保留在托盘</div></div><input type="checkbox" id="close-to-tray" checked></div>
-          <div class="setting-item"><div><div class="setting-label">默认音色</div><div class="setting-desc">启动后自动选中的音色</div></div><select id="default-voice" class="setting-select"></select></div>
-          <div class="setting-item"><div><div class="setting-label">推理引擎</div><div class="setting-desc" id="runtime-desc">ONNX Runtime（CPU 优化，启动快）</div></div><select id="runtime-select" class="setting-select"><option value="onnx">ONNX</option><option value="pytorch">PyTorch（MPS/CUDA）</option></select></div>
-          <div class="setting-item"><div><div class="setting-label">界面语言</div><div class="setting-desc" id="lang-desc">切换界面显示语言</div></div><select id="lang-select" class="setting-select"><option value="zh">中文</option><option value="en">English</option></select></div>
-          <div class="setting-item"><div><div class="setting-label">动态背景</div><div class="setting-desc">显示浮动光球和波浪动画</div></div><input type="checkbox" id="anim-bg-toggle"></div>
-          <div class="setting-item"><div><div class="setting-label">光球强度</div><div class="setting-desc">光球在背景中的可见程度</div></div><input type="number" id="orb-opacity" min="0" max="1" step="0.05" value="0.5" list="orb-opts" class="setting-select" style="width:120px;"><datalist id="orb-opts"><option value="0.3"><option value="0.4"><option value="0.5"><option value="0.6"><option value="0.7"><option value="0.8"></datalist></div>
-          <div class="setting-item"><div><div class="setting-label">暗黑模式</div><div class="setting-desc" id="dark-mode-desc">深色背景，护眼省电</div></div><input type="checkbox" id="dark-mode-toggle"></div>
+        <div class="settings-pane active" id="settings-general">
+          <div class="settings-list">
+            <div class="setting-item"><div><div class="setting-label">关闭窗口时最小化到托盘</div><div class="setting-desc">点击红色 × 不退出应用，保留在托盘</div></div><input type="checkbox" id="close-to-tray" checked></div>
+            <div class="setting-item"><div><div class="setting-label">默认音色</div><div class="setting-desc">启动后自动选中的音色</div></div><select id="default-voice" class="setting-select"></select></div>
+            <div class="setting-item"><div><div class="setting-label">界面语言</div><div class="setting-desc" id="lang-desc">切换界面显示语言</div></div><select id="lang-select" class="setting-select"><option value="zh">中文</option><option value="en">English</option></select></div>
+          </div>
+        </div>
+        <div class="settings-pane" id="settings-appearance">
+          <div class="settings-list">
+            <div class="setting-item"><div><div class="setting-label">动态背景</div><div class="setting-desc">显示浮动光球和波浪动画</div></div><input type="checkbox" id="anim-bg-toggle"></div>
+            <div class="setting-item"><div><div class="setting-label">光球强度</div><div class="setting-desc">光球在背景中的可见程度</div></div><input type="number" id="orb-opacity" min="0" max="1" step="0.05" value="0.5" list="orb-opts" class="setting-select"><datalist id="orb-opts"><option value="0.3"><option value="0.4"><option value="0.5"><option value="0.6"><option value="0.7"><option value="0.8"></datalist></div>
+            <div class="setting-item"><div><div class="setting-label">暗黑模式</div><div class="setting-desc" id="dark-mode-desc">深色背景，护眼省电</div></div><input type="checkbox" id="dark-mode-toggle"></div>
+          </div>
+        </div>
+        <div class="settings-pane" id="settings-engine">
+          <div class="settings-list">
+            <div class="setting-item"><div><div class="setting-label">推理引擎</div><div class="setting-desc" id="runtime-desc">ONNX Runtime（CPU 优化，启动快）</div></div><select id="runtime-select" class="setting-select"><option value="onnx">ONNX</option><option value="pytorch">PyTorch（MPS/CUDA）</option></select></div>
+            <div class="setting-item"><div><div class="setting-label">后端端口</div><div class="setting-desc" id="server-port-desc">语音合成服务端口，修改后需重启</div></div><input type="number" id="server-port" min="1024" max="65535" value="18083" class="setting-select"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -179,8 +195,8 @@
       <div class="modal-field"><label for="import-name">音色名称 *</label><input type="text" id="import-name" placeholder="例如：我的声音"></div>
       <div class="modal-field"><label for="import-lang">语言</label><input type="text" id="import-lang" placeholder="中文 / 英文 / 日文" list="lang-list"><datalist id="lang-list"><option value="中文"><option value="英文"><option value="日文"><option value="韩文"><option value="法文"><option value="德文"><option value="西班牙文"><option value="俄文"></datalist></div>
       <div class="modal-field"><label for="import-desc">描述</label><input type="text" id="import-desc" placeholder="简短描述这个音色的特点"></div>
-      <div class="modal-field"><label for="import-file">参考音频 (WAV) *</label><input type="text" id="import-file" placeholder="未选择文件" readonly style="background:#f5f5f7;cursor:pointer;" onclick="document.getElementById('import-file-input').click()"><input type="file" id="import-file-input" accept=".wav,.mp3,.flac" style="display:none;"></div>
-      <div class="modal-actions"><button class="btn btn-secondary" onclick="closeImportModal()">取消</button><button class="btn btn-primary" id="import-submit-btn" onclick="submitImport()">导入</button></div>
+      <div class="modal-field"><label for="import-file">参考音频 (WAV) *</label><input type="text" id="import-file" placeholder="未选择文件" readonly style="background:#f5f5f7;cursor:pointer;"><input type="file" id="import-file-input" accept=".wav,.mp3,.flac" style="display:none;"></div>
+      <div class="modal-actions"><button class="btn btn-secondary" id="import-cancel-btn">取消</button><button class="btn btn-primary" id="import-submit-btn">导入</button></div>
     </div>
   </div>
 
@@ -191,8 +207,8 @@
       <div class="modal-field"><label for="edit-name">音色名称</label><input type="text" id="edit-name"></div>
       <div class="modal-field"><label for="edit-lang">语言</label><input type="text" id="edit-lang"></div>
       <div class="modal-field"><label for="edit-desc">描述</label><input type="text" id="edit-desc"></div>
-      <div class="modal-field"><label for="edit-file">更新音频 (可选)</label><input type="text" id="edit-file" placeholder="不选择则保留原有音频" readonly style="background:#f5f5f7;cursor:pointer;" onclick="document.getElementById('edit-file-input').click()"><input type="file" id="edit-file-input" accept=".wav,.mp3,.flac" style="display:none;"></div>
-      <div class="modal-actions"><button class="btn btn-secondary" onclick="closeEditModal()">取消</button><button class="btn btn-primary" id="edit-submit-btn" onclick="submitEdit()">保存</button></div>
+      <div class="modal-field"><label for="edit-file">更新音频 (可选)</label><input type="text" id="edit-file" placeholder="不选择则保留原有音频" readonly style="background:#f5f5f7;cursor:pointer;"><input type="file" id="edit-file-input" accept=".wav,.mp3,.flac" style="display:none;"></div>
+      <div class="modal-actions"><button class="btn btn-secondary" id="edit-cancel-btn">取消</button><button class="btn btn-primary" id="edit-submit-btn">保存</button></div>
     </div>
   </div>
 
@@ -201,7 +217,7 @@
     <div class="modal" style="width:340px;">
       <h3>删除音色</h3>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">确定要删除 <strong id="delete-voice-name"></strong> 吗？<br>音频文件也会被删除。</p>
-      <div class="modal-actions"><button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button><button class="btn btn-primary" style="background:var(--error);" id="delete-submit-btn" onclick="submitDelete()">删除</button></div>
+      <div class="modal-actions"><button class="btn btn-secondary" id="delete-cancel-btn">取消</button><button class="btn btn-primary" style="background:var(--error);" id="delete-submit-btn">删除</button></div>
     </div>
   </div>
 
@@ -209,5 +225,6 @@
   <div class="statusbar"><span id="status">就绪</span><span class="spacer"></span><span id="status-right"></span></div>
 
   <script src="app.js"></script>
+  <script src="voices.js"></script>
 </body>
 </html>

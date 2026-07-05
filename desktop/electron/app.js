@@ -1,9 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════
-// MOSS-TTS-Nano Desktop — App
+// MOSS-TTS-Nano Desktop — 应用核心
 // ═══════════════════════════════════════════════════════════════════
 
+// ─── 共享命名空间（供 voices.js 等子模块使用） ────────────────
+window.MOSS = {};
+
 // ─── 常量 ────────────────────────────────────────────────────────────
-const API = "http://localhost:18083";
+let API = "http://localhost:18083";
 const isMac = navigator.platform.includes("Mac");
 
 // ─── DOM ──────────────────────────────────────────────────────────────
@@ -59,8 +62,14 @@ let currentBlob = null;
 let lastStatus = "";
 let chapters = [];
 let currentLang = "zh";
-let __ = {};  // i18n strings
-let hiddenVoiceIds = new Set();  // IDs of hidden voices, maintained for safety
+let __ = {};
+let hiddenVoiceIds = new Set();
+
+// 音频播放管理（通过 MOSS 命名空间共享，以支持 voices.js 中的引用）
+window.MOSS._currentAudio = null;
+window.MOSS._stopCurrentAudio = function() {
+  if (window.MOSS._currentAudio) { window.MOSS._currentAudio.pause(); window.MOSS._currentAudio = null; }
+};
 
 function t(key, vars) {
   const parts = key.split(".");
@@ -73,6 +82,12 @@ function t(key, vars) {
 function formatCount(key, n) { return t(key, { n: String(n) }); }
 
 // ─── 辅助 ────────────────────────────────────────────────────────────
+let _appVersion = "v1.0.0";
+
+async function _loadAppVersion() {
+  try { _appVersion = "v" + (await window.mossTTS.getAppVersion()); } catch (_) {}
+}
+
 function setServerOnline(ok) {
   dot.className = "titlebar-dot" + (ok ? "" : " off");
   dotText.textContent = ok ? "服务运行中" : "服务离线";
@@ -89,13 +104,13 @@ function base64ToBlob(b64, mime) {
 }
 function fmtSize(bytes) {
   if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
-  return (bytes/1024/1024).toFixed(1) + " MB";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
 }
 function fmtDuration(secs) {
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
-  return m > 0 ? m + ":" + String(s).padStart(2,"0") : "0:" + String(s).padStart(2,"0");
+  return m > 0 ? m + ":" + String(s).padStart(2, "0") : "0:" + String(s).padStart(2, "0");
 }
 
 // ─── 服务器检测 ──────────────────────────────────────────────────────────
@@ -109,8 +124,8 @@ async function checkServer() {
       const backendInfo = info.device + " · " + (info.attn_implementation || "auto");
       settingsBackend.textContent = backendInfo;
       const aboutText = document.querySelector("#about-text");
-      if (aboutText) aboutText.innerHTML = t("settings.version") + "<br>" + t("settings.backend") + '<span id="settings-backend">' + backendInfo + "</span>";
-      if (!serverReady) { serverReady = true; loadVoices(); }
+      if (aboutText) aboutText.innerHTML = _appVersion + "<br>" + t("settings.backend") + '<span id="settings-backend">' + backendInfo + "</span>";
+      if (!serverReady) { serverReady = true; window.MOSS.loadVoices(); }
       return true;
     }
   } catch (_) {}
@@ -121,7 +136,7 @@ async function checkServer() {
 setInterval(checkServer, 5000);
 checkServer();
 
-// ─── 音色列表 ────────────────────────────────────────────────────────────
+// ─── 音色列表（基础版本 — 仅填充下拉框） ────────────────────
 async function loadVoices() {
   try {
     const showHidden = document.getElementById("show-hidden-voices")?.checked || false;
@@ -155,6 +170,8 @@ async function loadVoices() {
     setStatus(t("app.loadFailed"), true);
   }
 }
+window.MOSS.loadVoices = loadVoices;  // voices.js 会增强此函数
+window.MOSS.baseLoadVoices = loadVoices;
 
 // ─── Tab 切换 ──────────────────────────────────────────────────────────
 tabs.forEach(t => {
@@ -163,13 +180,22 @@ tabs.forEach(t => {
     t.classList.add("active");
     const id = t.dataset.tab;
     Object.entries(tabLayouts).forEach(([k, el]) => el.classList.toggle("active", k === id));
-    if (id === "voices") loadVoices();
-    // Update accent color for current tab
+    if (id === "voices") window.MOSS.loadVoices();
     const themeColors = { single: "#4a7da8", book: "#4a9e62", voices: "#8a5fad", settings: "#d48c30" };
     const color = themeColors[id] || "#0071e3";
     document.documentElement.style.setProperty("--accent", color);
-    // Compute slightly darker hover
     document.documentElement.style.setProperty("--accent-hover", color + "dd");
+  });
+});
+
+// ─── 设置标签页切换 ────────────────────────────────────────────────
+document.querySelectorAll(".settings-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".settings-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(".settings-pane").forEach(p => p.classList.remove("active"));
+    const pane = document.getElementById("settings-" + tab.dataset.stab);
+    if (pane) pane.classList.add("active");
   });
 });
 
@@ -188,8 +214,7 @@ document.addEventListener("click", (e) => {
     const tipKey = icon.dataset.tip;
     const text = t(`single.${tipKey}`);
     if (paramTooltip.classList.contains("visible") && paramTooltip._tipKey === tipKey) {
-      paramTooltip.classList.remove("visible");
-      return;
+      paramTooltip.classList.remove("visible"); return;
     }
     paramTooltip.textContent = text;
     paramTooltip._tipKey = tipKey;
@@ -285,231 +310,10 @@ function renderBookList() {
   if (chapters.length > 0) { bookProgress.style.display = "block"; bookProgressFill.style.width = (doneCount / chapters.length * 100) + "%"; }
 }
 
-// ─── 音色管理 ────────────────────────────────────────────────────────────
-let allVoices = [];
-let editingVoiceId = null, deletingVoiceId = null;
-let _currentAudio = null;
-
-function _stopCurrentAudio() {
-  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
-}
-
-function renderVoiceGrid() {
-  const grid = $("#voice-grid");
-  const query = (document.getElementById("voice-search")?.value || "").toLowerCase().trim();
-  const langFilter = document.getElementById("voice-lang-filter")?.value || "";
-
-  if (allVoices.length === 0) { grid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">' + t("voices.noVoices") + '</div>'; return; }
-
-  // Filter
-  let filtered = allVoices;
-  if (query) filtered = filtered.filter(v => (v.name || "").toLowerCase().includes(query));
-  if (langFilter) filtered = filtered.filter(v => (v.language || "其他") === langFilter);
-
-  if (filtered.length === 0) {
-    grid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">没有匹配的音色</div>';
-    return;
-  }
-
-  const groups = {};
-  for (const v of filtered) {
-    const lang = v.language || "其他";
-    if (!groups[lang]) groups[lang] = [];
-    groups[lang].push(v);
-  }
-  if (!window._voiceCollapsed) window._voiceCollapsed = {};
-  let html = "";
-  for (const [lang, items] of Object.entries(groups)) {
-    const collapsed = window._voiceCollapsed[lang] || false;
-    const arrow = collapsed ? "▸" : "▾";
-    const cardStyle = collapsed ? 'style="display:none;"' : "";
-    html += `<div class="voice-group-header" data-lang="${lang}" style="font-size:12px;font-weight:600;color:var(--text-secondary);padding:8px 0 4px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;user-select:none;"><span class="voice-group-arrow" style="display:inline-block;width:14px;">${arrow}</span>${lang} (${items.length})</div>`;
-    for (const v of items) {
-      const eyeIcon = v.hidden ? "👁️‍🗨️" : "👁️";
-      const eyeTitle = v.hidden ? t("voices.unhide") : t("voices.hide");
-      const vStyle = v.hidden ? "opacity:0.5;" : "";
-      html += `<div class="voice-card" ${cardStyle} style="${vStyle}"><span class="lang-tag">${lang}</span><div style="flex:1;min-width:0;"><div class="vname">${v.name}</div><div class="vdesc">${v.description || ""}</div></div><div class="vactions"><button class="voice-btn" data-id="${v.id}" data-action="preview" title="合成试听">▶</button><button class="voice-btn" data-id="${v.id}" data-action="listen" title="播放参考音频">🔊</button><button class="voice-btn" data-id="${v.id}" data-action="edit" title="编辑">✏️</button><button class="voice-btn" data-id="${v.id}" data-action="hide" title="${eyeTitle}" style="font-size:14px;">${eyeIcon}</button><button class="voice-btn" data-id="${v.id}" data-action="delete" title="删除" style="color:var(--error);font-size:14px;">🗑</button></div></div>`;
-    }
-  }
-  grid.innerHTML = html;
-  // Bind group header click to collapse/expand
-  grid.querySelectorAll(".voice-group-header").forEach(hdr => {
-    hdr.addEventListener("click", () => {
-      const lang = hdr.dataset.lang;
-      window._voiceCollapsed[lang] = !window._voiceCollapsed[lang];
-      renderVoiceGrid();
-    });
-  });
-  grid.querySelectorAll(".voice-btn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.dataset.id, action = btn.dataset.action;
-      if (action === "preview") await previewVoice(id, btn);
-      else if (action === "listen") await listenVoice(id);
-      else if (action === "hide") await toggleHidden(id);
-      else if (action === "edit") openEditModal(id);
-      else if (action === "delete") openDeleteModal(id);
-    });
-  });
-}
-
-async function previewVoice(id, btn) {
-  btn.disabled = true; btn.textContent = "⏳";
-  setStatus(t("voices.previewGenerating"));
-  try {
-    const fd = new FormData();
-    fd.append("voice_name", id); fd.append("text", document.getElementById("preview-text")?.value || t("single.previewText")); fd.append("audio_temperature", "0.8");
-    const r = await fetch(API + "/api/generate", { method: "POST", body: fd });
-    const data = await r.json();
-    if (data.audio_base64) {
-      const blob = base64ToBlob(data.audio_base64, "audio/wav");
-      _stopCurrentAudio();
-      const a = new Audio(URL.createObjectURL(blob));
-      _currentAudio = a;
-      a.play().catch(() => {}); setStatus(t("voices.previewPlaying"));
-      a.onended = () => { setStatus(t("voices.previewEnded")); if (_currentAudio === a) _currentAudio = null; };
-    }
-  } catch (e) { setStatus(t("voices.previewFailed") + e.message, true); }
-  btn.disabled = false; btn.textContent = "▶";
-}
-
-async function listenVoice(id) {
-  try {
-    const r = await fetch(API + "/api/voices/" + encodeURIComponent(id) + "/audio");
-    if (!r.ok) { setStatus(t("voices.listenFailed") + "404", true); return; }
-    const blob = await r.blob();
-    _stopCurrentAudio();
-    const a = new Audio(URL.createObjectURL(blob));
-    _currentAudio = a;
-    a.play().catch(() => {}); setStatus(t("voices.listenRef"));
-    a.onended = () => { setStatus(t("voices.listenEnded")); if (_currentAudio === a) _currentAudio = null; };
-  } catch (e) { setStatus(t("voices.listenFailed") + e.message, true); }
-}
-
-async function toggleHidden(id) {
-  try {
-    const r = await fetch(API + "/api/voices/" + encodeURIComponent(id) + "/toggle-hidden", { method: "PATCH" });
-    const data = await r.json();
-    if (!r.ok) { setStatus("操作失败", true); return; }
-    setStatus(data.hidden ? t("voices.hide") : t("voices.unhide"));
-    await loadVoices();
-  } catch (e) { setStatus(t("voices.hide") + " " + e.message, true); }
-}
-
-function openImportModal() {
-  $("#import-name").value = ""; $("#import-lang").value = ""; $("#import-desc").value = ""; $("#import-file").value = t("voices.importNoFile");
-  document.getElementById("import-file-input").value = "";
-  document.getElementById("modal-import").classList.add("visible");
-  setTimeout(() => $("#import-name").focus(), 100);
-}
-function closeImportModal() { document.getElementById("modal-import").classList.remove("visible"); }
-document.getElementById("import-file-input").addEventListener("change", function() { if (this.files && this.files[0]) $("#import-file").value = this.files[0].name; });
-
-async function submitImport() {
-  const name = $("#import-name").value.trim(), lang = $("#import-lang").value.trim(), desc = $("#import-desc").value.trim();
-  const fileInput = document.getElementById("import-file-input");
-  if (!name) { setStatus(t("voices.nameRequired"), true); return; }
-  if (!fileInput.files || !fileInput.files[0]) { setStatus(t("voices.fileRequired"), true); return; }
-  const submitBtn = $("#import-submit-btn");
-  submitBtn.disabled = true; submitBtn.textContent = t("voices.importing"); setStatus(t("voices.importing"));
-  try {
-    const fd = new FormData(); fd.append("name", name); fd.append("language", lang || "自定义"); fd.append("description", desc); fd.append("audio_file", fileInput.files[0]);
-    const r = await fetch(API + "/api/voices", { method: "POST", body: fd }); const data = await r.json();
-    if (!r.ok) { setStatus(t("voices.importFailed") + (data.error || r.statusText), true); submitBtn.disabled = false; submitBtn.textContent = t("voices.submitImport"); return; }
-    setStatus(t("voices.importSucceed") + name); closeImportModal(); await loadVoices();
-  } catch (e) { setStatus(t("voices.importFailed") + e.message, true); }
-  submitBtn.disabled = false; submitBtn.textContent = t("voices.submitImport");
-}
-
-function openEditModal(voiceId) {
-  const voice = allVoices.find(v => v.id === voiceId); if (!voice) return;
-  editingVoiceId = voiceId;
-  $("#edit-name").value = voice.name || voice.id; $("#edit-lang").value = voice.language || ""; $("#edit-desc").value = voice.description || ""; $("#edit-file").value = "不更换";
-  document.getElementById("edit-file-input").value = "";
-  document.getElementById("modal-edit").classList.add("visible"); setTimeout(() => $("#edit-name").focus(), 100);
-}
-function closeEditModal() { document.getElementById("modal-edit").classList.remove("visible"); editingVoiceId = null; }
-document.getElementById("edit-file-input").addEventListener("change", function() { if (this.files && this.files[0]) $("#edit-file").value = this.files[0].name; });
-
-async function submitEdit() {
-  if (!editingVoiceId) return;
-  const name = $("#edit-name").value.trim(), lang = $("#edit-lang").value.trim(), desc = $("#edit-desc").value.trim();
-  const fileInput = document.getElementById("edit-file-input");
-  const submitBtn = $("#edit-submit-btn"); submitBtn.disabled = true; submitBtn.textContent = t("voices.saving"); setStatus(t("voices.saving"));
-  try {
-    const fd = new FormData();
-    if (name) fd.append("name", name); if (lang) fd.append("language", lang); if (desc) fd.append("description", desc);
-    if (fileInput.files && fileInput.files[0]) fd.append("audio_file", fileInput.files[0]);
-    const r = await fetch(API + "/api/voices/" + encodeURIComponent(editingVoiceId), { method: "PUT", body: fd }); const data = await r.json();
-    if (!r.ok) { setStatus(t("voices.saveErr") + (data.error || r.statusText), true); submitBtn.disabled = false; submitBtn.textContent = t("voices.submitEdit"); return; }
-    setStatus(t("voices.saved_")); closeEditModal(); await loadVoices();
-  } catch (e) { setStatus(t("voices.saveErr") + e.message, true); }
-  submitBtn.disabled = false; submitBtn.textContent = t("voices.submitEdit");
-}
-
-function openDeleteModal(voiceId) {
-  const voice = allVoices.find(v => v.id === voiceId); if (!voice) return;
-  deletingVoiceId = voiceId; document.getElementById("delete-voice-name").textContent = voice.name || voice.id;
-  document.getElementById("modal-delete").classList.add("visible");
-}
-function closeDeleteModal() { document.getElementById("modal-delete").classList.remove("visible"); deletingVoiceId = null; }
-
-async function submitDelete() {
-  if (!deletingVoiceId) return;
-  const submitBtn = $("#delete-submit-btn"); submitBtn.disabled = true; submitBtn.textContent = t("voices.deleting");
-  try {
-    const r = await fetch(API + "/api/voices/" + encodeURIComponent(deletingVoiceId), { method: "DELETE" }); const data = await r.json();
-    if (!r.ok) { setStatus(t("voices.deleteErr") + (data.error || r.statusText), true); submitBtn.disabled = false; submitBtn.textContent = t("voices.delete_"); return; }
-    setStatus(t("voices.deleted_") + (data.deleted || "")); closeDeleteModal(); await loadVoices();
-  } catch (e) { setStatus(t("voices.deleteErr") + e.message, true); }
-  submitBtn.disabled = false; submitBtn.textContent = t("voices.delete_");
-}
-
-$("#refresh-voices-btn").addEventListener("click", async () => { setStatus(t("voices.refreshed")); await loadVoices(); setStatus(t("voices.refreshed") + " " + formatCount("voices.count", allVoices.length)); });
-$("#add-voice-btn").addEventListener("click", openImportModal);
-document.getElementById("voice-search")?.addEventListener("input", () => renderVoiceGrid());
-document.getElementById("voice-lang-filter")?.addEventListener("change", () => renderVoiceGrid());
-
-const origLoadVoices = loadVoices;
-loadVoices = async function() {
-  await origLoadVoices.call(this);
-  $("#voice-book").innerHTML = voiceSelect.innerHTML;
-
-  // Fetch ALL voices (including hidden) for the voice grid page
-  try {
-    const r = await fetch(API + "/api/voices?show_hidden=true");
-    const allData = await r.json();
-    allVoices = allData.voices || [];
-    hiddenVoiceIds = new Set(allVoices.filter(v => v.hidden).map(v => v.id));
-
-    // Populate language filter dropdown
-    const langFilter = document.getElementById("voice-lang-filter");
-    if (langFilter) {
-      const langs = new Set(allVoices.map(v => v.language || "其他"));
-      const currentVal = langFilter.value;
-      langFilter.innerHTML = '<option value="">' + t("voices.allLanguages") + '</option>';
-      for (const l of [...langs].sort()) {
-        const o = document.createElement("option");
-        o.value = l; o.textContent = l;
-        langFilter.appendChild(o);
-      }
-      langFilter.value = currentVal || "";
-    }
-  } catch (_) { allVoices = []; }
-
-  // Double-check no hidden voice leaks into dropdowns
-  const filterDropdown = (sel) => {
-    if (!sel) return;
-    const opts = sel.querySelectorAll("option");
-    opts.forEach(o => {
-      if (o.value && hiddenVoiceIds.has(o.value)) o.remove();
-    });
-  };
-  filterDropdown(voiceSelect);
-  filterDropdown($("#voice-book"));
-  filterDropdown(document.getElementById("default-voice"));
-
-  renderVoiceGrid();
-};
+// ─── GitHub 仓库链接 ──────────────────────────────────────────────────
+$("#repo-link")?.addEventListener("click", (e) => { e.preventDefault(); window.mossTTS.openExternal("https://github.com/CharlesShan-hub/MossTTSNanoDesktop"); });
+$("#repo-link")?.addEventListener("mouseenter", function() { this.style.borderColor = "var(--accent)"; });
+$("#repo-link")?.addEventListener("mouseleave", function() { this.style.borderColor = "var(--border)"; });
 
 // ─── 推理引擎切换 ─────────────────────────────────────────────────────
 const runtimeSelect = document.getElementById("runtime-select");
@@ -584,54 +388,44 @@ function applyLang() {
   if (previewInput) previewInput.placeholder = t("single.previewText");
   const loadingOpt = document.getElementById("voice-loading-opt");
   if (loadingOpt) loadingOpt.textContent = t("app.loading");
-  // Update dot-text if still showing initial loading state
   const dt = document.getElementById("dot-text");
   if (dt && dt.textContent.match(/加载中|Loading/)) dt.textContent = t("app.loading");
   // ── Settings tab ──
-  document.querySelector("#settings-section-label").textContent = t("settings.preferences");
+  // Settings sidebar tabs
+  document.querySelectorAll(".settings-tab").forEach(tab => {
+    tab.textContent = t(`settings.${tab.dataset.stab}`);
+  });
   document.querySelector("#about-label").textContent = t("settings.about");
-  document.querySelector("#about-text").innerHTML = t("settings.version") + "<br>" + t("settings.backend") + '<span id="settings-backend">' + (settingsBackend?.textContent || t("settings.backendChecking")) + '</span>';
+  document.querySelector("#about-text").innerHTML = _appVersion + "<br>" + t("settings.backend") + '<span id="settings-backend">' + (settingsBackend?.textContent || t("settings.backendChecking")) + '</span>';
   const repoLinkText = document.getElementById("repo-link-text");
   if (repoLinkText) repoLinkText.textContent = t("settings.repoLink");
-  const s1 = document.querySelector(".setting-item:nth-child(1) .setting-label");
-  const s1d = document.querySelector(".setting-item:nth-child(1) .setting-desc");
-  if (s1) s1.textContent = t("settings.startup");
-  if (s1d) s1d.textContent = t("settings.startupDesc");
-  const s2 = document.querySelector(".setting-item:nth-child(2) .setting-label");
-  const s2d = document.querySelector(".setting-item:nth-child(2) .setting-desc");
-  if (s2) s2.textContent = t("settings.closeToTray");
-  if (s2d) s2d.textContent = t("settings.closeToTrayDesc");
-  const s3 = document.querySelector(".setting-item:nth-child(3) .setting-label");
-  const s3d = document.querySelector(".setting-item:nth-child(3) .setting-desc");
-  if (s3) s3.textContent = t("settings.defaultVoice");
-  if (s3d) s3d.textContent = t("settings.defaultVoiceDesc");
-  const s4 = document.querySelector(".setting-item:nth-child(4) .setting-label");
-  const s4d = document.querySelector(".setting-item:nth-child(4) .setting-desc");
-  if (s4) s4.textContent = t("settings.runtimeTitle");
-  if (s4d) s4d.textContent = t("settings.runtimeDesc");
-  const s5 = document.querySelector(".setting-item:nth-child(5) .setting-label");
-  const s5d = document.querySelector(".setting-item:nth-child(5) .setting-desc");
-  if (s5) s5.textContent = t("settings.langTitle");
-  if (s5d) s5d.textContent = t("settings.langDesc");
-  const s6 = document.querySelector(".setting-item:nth-child(6) .setting-label");
-  const s6d = document.querySelector(".setting-item:nth-child(6) .setting-desc");
-  if (s6) s6.textContent = t("settings.animBg");
-  if (s6d) s6d.textContent = t("settings.animBgDesc");
-  const s7 = document.querySelector(".setting-item:nth-child(7) .setting-label");
-  const s7d = document.querySelector(".setting-item:nth-child(7) .setting-desc");
-  if (s7) s7.textContent = t("settings.orbOpacity");
-  if (s7d) s7d.textContent = t("settings.orbOpacityDesc");
-  const s8 = document.querySelector(".setting-item:nth-child(8) .setting-label");
-  const s8d = document.getElementById("dark-mode-desc");
-  if (s8) s8.textContent = t("settings.darkMode");
-  if (s8d) s8d.textContent = t("settings.darkModeDesc");
-  // Update runtime desc too
+  // Setting items by ID
+  const settingLabels = {
+    "close-to-tray": ["closeToTray", "closeToTrayDesc"],
+    "default-voice": ["defaultVoice", "defaultVoiceDesc"],
+    "lang-select": ["langTitle", "langDesc"],
+    "anim-bg-toggle": ["animBg", "animBgDesc"],
+    "orb-opacity": ["orbOpacity", "orbOpacityDesc"],
+    "dark-mode-toggle": ["darkMode", "darkModeDesc"],
+    "runtime-select": ["runtimeTitle", "runtimeDesc"],
+    "server-port": ["serverPort", "serverPortDesc"],
+  };
+  document.querySelectorAll(".setting-item").forEach(item => {
+    const input = item.querySelector('input, select');
+    if (!input) return;
+    const label = item.querySelector(".setting-label");
+    const desc = item.querySelector(".setting-desc");
+    const keys = settingLabels[input.id];
+    if (label && keys) label.textContent = t(`settings.${keys[0]}`);
+    if (desc && keys) desc.textContent = t(`settings.${keys[1]}`);
+  });
   if (runtimeSelect) updateRuntimeDesc(runtimeSelect.value);
   // Modal placeholders
   document.querySelector("#import-name").placeholder = t("voices.importNamePlaceholder");
   document.querySelector("#import-lang").placeholder = t("voices.importLangPlaceholder");
   document.querySelector("#import-desc").placeholder = t("voices.importDescPlaceholder");
-  renderVoiceGrid(); renderBookList();
+  renderBookList();
+  window.MOSS.renderVoiceGrid?.();
   if (langSelect) langSelect.value = currentLang;
 }
 
@@ -641,21 +435,17 @@ langSelect.addEventListener("change", async () => {
   applyLang();
   window.mossTTS.setSettings({ lang: currentLang }).catch(() => {});
 });
-document.getElementById("auto-start")?.addEventListener("change", () => { window.mossTTS.setSettings({ autoStart: document.getElementById("auto-start").checked }).catch(() => {}); });
+
+// ─── 设置处理 ──────────────────────────────────────────────────────────
 document.getElementById("close-to-tray")?.addEventListener("change", () => { window.mossTTS.setSettings({ closeToTray: document.getElementById("close-to-tray").checked }).catch(() => {}); });
 document.getElementById("default-voice")?.addEventListener("change", () => { window.mossTTS.setSettings({ defaultVoice: document.getElementById("default-voice").value }).catch(() => {}); });
 
-// Animated background toggle
 const animBg = document.getElementById("anim-bg");
 const animBgToggle = document.getElementById("anim-bg-toggle");
 if (animBgToggle) {
-  animBgToggle.addEventListener("change", () => {
-    animBg.classList.toggle("on", animBgToggle.checked);
-    window.mossTTS.setSettings({ animBg: animBgToggle.checked }).catch(() => {});
-  });
+  animBgToggle.addEventListener("change", () => { animBg.classList.toggle("on", animBgToggle.checked); window.mossTTS.setSettings({ animBg: animBgToggle.checked }).catch(() => {}); });
 }
 
-// Orb opacity
 const orbOpacityInput = document.getElementById("orb-opacity");
 function applyOrbOpacity(val) {
   const v = parseFloat(val);
@@ -663,31 +453,36 @@ function applyOrbOpacity(val) {
   document.querySelectorAll(".anim-bg .orb").forEach(el => el.style.opacity = v);
 }
 if (orbOpacityInput) {
-  orbOpacityInput.addEventListener("change", () => {
-    applyOrbOpacity(orbOpacityInput.value);
-    window.mossTTS.setSettings({ orbOpacity: orbOpacityInput.value }).catch(() => {});
-  });
+  orbOpacityInput.addEventListener("change", () => { applyOrbOpacity(orbOpacityInput.value); window.mossTTS.setSettings({ orbOpacity: orbOpacityInput.value }).catch(() => {}); });
 }
 
-// Dark mode toggle
 const darkModeToggle = document.getElementById("dark-mode-toggle");
 if (darkModeToggle) {
-  darkModeToggle.addEventListener("change", () => {
-    document.documentElement.classList.toggle("dark-mode", darkModeToggle.checked);
-    window.mossTTS.setSettings({ darkMode: darkModeToggle.checked }).catch(() => {});
+  darkModeToggle.addEventListener("change", () => { document.documentElement.classList.toggle("dark-mode", darkModeToggle.checked); window.mossTTS.setSettings({ darkMode: darkModeToggle.checked }).catch(() => {}); });
+}
+
+const serverPortInput = document.getElementById("server-port");
+if (serverPortInput) {
+  serverPortInput.addEventListener("change", () => {
+    const val = parseInt(serverPortInput.value, 10);
+    if (isNaN(val) || val < 1024 || val > 65535) { setStatus("端口号需在 1024–65535 之间", true); serverPortInput.value = API.split(":").pop(); return; }
+    setStatus("正在切换端口，重启后端服务...");
+    window.mossTTS.setSettings({ serverPort: val }).then(() => { API = `http://localhost:${val}`; setStatus(`端口已切换至 ${val}，等待服务就绪...`); checkServer(); }).catch(() => {});
   });
 }
 
-// GitHub repo link
-document.getElementById("repo-link")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  window.mossTTS.openExternal("https://github.com/CharlesShan-hub/MossTTSNanoDesktop");
-});
-
+// 覆盖状态函数（国际化后需要调用 t()）
 const _origSetStatus = setStatus;
 setStatus = function(msg, isErr) { statusText.textContent = msg; statusText.className = isErr ? "error" : ""; };
 const _origSetServerOnline = setServerOnline;
 setServerOnline = function(ok) { dot.className = "titlebar-dot" + (ok ? "" : " off"); dotText.textContent = ok ? t("app.online") : t("app.offline"); };
+
+// ─── 暴露给子模块（voices.js） ──────────────────────────────────
+Object.assign(window.MOSS, {
+  $, t, setStatus, base64ToBlob, formatCount,
+  loadVoices, baseLoadVoices: loadVoices,
+});
+Object.defineProperty(window.MOSS, "API", { get: () => API });
 
 // ─── 初始化 ──────────────────────────────────────────────────────────────
 async function initApp() {
@@ -697,24 +492,16 @@ async function initApp() {
     if (s.runtime && document.getElementById("runtime-select")) document.getElementById("runtime-select").value = s.runtime;
     if (s.defaultVoice && document.getElementById("default-voice")) document.getElementById("default-voice").value = s.defaultVoice;
     if (s.closeToTray !== undefined && document.getElementById("close-to-tray")) document.getElementById("close-to-tray").checked = s.closeToTray;
-    // Animated background (default on)
     const animOn = s.animBg !== false;
     if (document.getElementById("anim-bg-toggle")) document.getElementById("anim-bg-toggle").checked = animOn;
     if (animOn) document.getElementById("anim-bg")?.classList.add("on");
-    // Orb opacity
-    if (s.orbOpacity && document.getElementById("orb-opacity")) {
-      document.getElementById("orb-opacity").value = s.orbOpacity;
-      applyOrbOpacity(s.orbOpacity);
-    }
-    // Dark mode
-    if (s.darkMode) {
-      document.getElementById("dark-mode-toggle").checked = true;
-      document.documentElement.classList.add("dark-mode");
-    }
+    if (s.orbOpacity && document.getElementById("orb-opacity")) { document.getElementById("orb-opacity").value = s.orbOpacity; applyOrbOpacity(s.orbOpacity); }
+    if (s.darkMode) { document.getElementById("dark-mode-toggle").checked = true; document.documentElement.classList.add("dark-mode"); }
+    if (s.serverPort) { API = `http://localhost:${s.serverPort}`; const pi = document.getElementById("server-port"); if (pi) pi.value = s.serverPort; }
   } catch (_) {}
   try { __ = await window.mossTTS.getI18n(currentLang); } catch (_) {}
+  await _loadAppVersion();
   applyLang();
-  // Set initial accent color (single tab = blue)
   document.documentElement.style.setProperty("--accent", "#4a7da8");
   document.documentElement.style.setProperty("--accent-hover", "#4a7da8dd");
 }

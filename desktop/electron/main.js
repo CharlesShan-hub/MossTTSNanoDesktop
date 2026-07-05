@@ -1,8 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════
+// MOSS-TTS-Nano Desktop — 主进程（窗口、托盘、IPC、生命周期）
+// ═══════════════════════════════════════════════════════════════════
+
 const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
 const http = require("http");
+const server = require("./server");
 
 // ─── 单实例锁 ────────────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
@@ -18,147 +22,56 @@ if (!gotLock) {
   });
 }
 
-// ─── 常量 ──────────────────────────────────────────────────────────────────
-const SERVER_PORT = 18083;
-const SERVER_URL = `http://localhost:${SERVER_PORT}`;
-const POLL_INTERVAL_MS = 500;
-const POLL_TIMEOUT_MS = 30_000;
+// ─── 资源路径配置 ──────────────────────────────────────────────────────────
+const APP_VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, "version.json"), "utf-8")).version;
 
-// ─── 运行时模式 ────────────────────────────────────────────────────────────
-let currentRuntime = "onnx";  // "onnx" | "pytorch"
+const RESOURCES = {
+  get root() {
+    return app.isPackaged ? process.resourcesPath : path.join(__dirname, "..", "..");
+  },
+  get onnxModelsDir() {
+    return path.join(this.root, "onnx");
+  },
+  get audioDir() {
+    return path.join(this.root, "assets", "audio");
+  },
+  get voicesManifest() {
+    return path.join(this.root, "assets", "audio", "voices.json");
+  },
+  get settingsPath() {
+    return path.join(app.getPath("userData"), "settings.json");
+  },
+};
+
+// ─── 默认设置 ────────────────────────────────────────────────────────────
+const DEFAULT_SETTINGS = {
+  lang: "zh", runtime: "onnx", defaultVoice: "",
+  closeToTray: true, animBg: true, darkMode: false,
+  autoStart: true, serverPort: 18083,
+};
+
+// ─── 设置读写 ──────────────────────────────────────────────────────────────
+function loadSettings() {
+  try {
+    if (fs.existsSync(RESOURCES.settingsPath)) {
+      return JSON.parse(fs.readFileSync(RESOURCES.settingsPath, "utf-8"));
+    }
+  } catch (_) {}
+  return { ...DEFAULT_SETTINGS };
+}
+
+function saveSettings(settings) {
+  try {
+    fs.mkdirSync(path.dirname(RESOURCES.settingsPath), { recursive: true });
+    fs.writeFileSync(RESOURCES.settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+  } catch (_) {}
+}
 
 // ─── 状态 ──────────────────────────────────────────────────────────────────
 let mainWindow = null;
 let tray = null;
-let serverProcess = null;
-let isQuitting = false;
 
-// ─── 工具函数 ──────────────────────────────────────────────────────────────
-
-/** 找到 Python 后端二进制文件 */
-function findServerBinary() {
-  // 打包后的路径: <app>/Contents/Resources/server/moss-tts-server
-  // 开发时: pixi run serve-onnx
-  const isPackaged = app.isPackaged;
-  if (isPackaged) {
-    const platform = process.platform;
-    const binName = platform === "win32" ? "moss-tts-server.exe" : "moss-tts-server";
-    const searchPaths = [
-      path.join(process.resourcesPath, "server", binName),
-      path.join(process.resourcesPath, "server", platform, binName),
-    ];
-    for (const p of searchPaths) {
-      try {
-        require("fs").accessSync(p);
-        return p;
-      } catch (_) {}
-    }
-    return null;
-  }
-  // 开发模式下返回 null，外部自己启动服务
-  return null;
-}
-
-/** 轮询等待后端就绪 */
-function waitForServer(timeoutMs = POLL_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    const poll = () => {
-      if (isQuitting) return reject(new Error("app quitting"));
-      http
-        .get(`${SERVER_URL}/health`, (res) => {
-          let data = "";
-          res.on("data", (chunk) => (data += chunk));
-          res.on("end", () => resolve(true));
-        })
-        .on("error", () => {
-          if (Date.now() - start > timeoutMs) {
-            reject(new Error(`Server did not start within ${timeoutMs}ms`));
-          } else {
-            setTimeout(poll, POLL_INTERVAL_MS);
-          }
-        });
-    };
-    poll();
-  });
-}
-
-let serverStarting = false;
-
-/** 启动 Python 后端 */
-function startServer() {
-  if (serverStarting) {
-    console.log("[server] already starting, skipping");
-    return;
-  }
-  serverStarting = true;
-
-  const binary = findServerBinary();
-  if (binary) {
-    // 打包模式：直接执行 PyInstaller 二进制
-    serverProcess = spawn(binary, [], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } else {
-    // 开发模式：通过 pixi 启动，传 runtime 参数
-    const projectRoot = path.join(__dirname, "..", "..");
-    const pixiTask = currentRuntime === "onnx" ? "serve-onnx" : "serve";
-    serverProcess = spawn("pixi", ["run", pixiTask], {
-      cwd: projectRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
-    });
-  }
-
-  serverProcess.stdout.on("data", (data) => {
-    console.log(`[server] ${data.toString().trim()}`);
-  });
-  serverProcess.stderr.on("data", (data) => {
-    console.error(`[server:err] ${data.toString().trim()}`);
-  });
-  serverProcess.on("exit", (code) => {
-    console.log(`[server] exited with code ${code}`);
-    serverProcess = null;
-    serverStarting = false;
-  });
-}
-
-/** 停止 Python 后端 */
-function stopServer() {
-  if (serverProcess) {
-    serverProcess.kill("SIGTERM");
-    serverProcess = null;
-    serverStarting = false;
-    // 给 3 秒优雅退出，否则强制 kill
-    setTimeout(() => {
-      if (serverProcess) {
-        serverProcess.kill("SIGKILL");
-        serverProcess = null;
-      }
-    }, 3000);
-  }
-}
-
-/** 等待端口释放 */
-function _waitForPortFree(timeoutMs) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const check = () => {
-      try {
-        const occupied = require("child_process").execSync(
-          `lsof -ti:${SERVER_PORT} 2>/dev/null || true`,
-          { encoding: "utf-8" }
-        ).trim();
-        if (!occupied) return resolve();
-      } catch (_) {}
-      if (Date.now() - start > timeoutMs) return resolve(); // give up, try anyway
-      setTimeout(check, 500);
-    };
-    check();
-  });
-}
-
-/** 注册 IPC 处理器（只注册一次） */
+// ─── IPC 处理器 ──────────────────────────────────────────────────────────
 function registerIpcHandlers() {
   ipcMain.handle("save-dialog", async (_event, defaultName) => {
     const result = await dialog.showSaveDialog(mainWindow, {
@@ -171,8 +84,7 @@ function registerIpcHandlers() {
 
   ipcMain.handle("write-file", async (_event, filePath, base64Data) => {
     try {
-      const buffer = Buffer.from(base64Data, "base64");
-      fs.writeFileSync(filePath, buffer);
+      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -190,8 +102,7 @@ function registerIpcHandlers() {
 
   ipcMain.handle("read-file", async (_event, filePath) => {
     try {
-      const content = fs.readFileSync(filePath, "utf-8");
-      return { success: true, content };
+      return { success: true, content: fs.readFileSync(filePath, "utf-8") };
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -202,90 +113,72 @@ function registerIpcHandlers() {
     shell.openExternal(url);
   });
 
-  // Runtime mode switching
-  ipcMain.handle("get-runtime", async () => {
-    return currentRuntime;
-  });
+  ipcMain.handle("get-runtime", async () => server.getRuntime());
 
   ipcMain.handle("set-runtime", async (_event, mode) => {
     if (mode !== "onnx" && mode !== "pytorch") return { success: false, error: "invalid mode" };
-    if (mode === currentRuntime) return { success: true, changed: false };
-    currentRuntime = mode;
+    if (mode === server.getRuntime()) return { success: true, changed: false };
+    server.setRuntime(mode);
 
-    // Persist setting
     const settings = loadSettings();
     settings.runtime = mode;
     saveSettings(settings);
 
-    // Kill the current server and wait for port to be free
-    stopServer();
-    await _waitForPortFree(15000);
+    server.stopServer();
+    await server.waitForPortFree(15000);
+    server.startServer(RESOURCES.root, app.isPackaged);
 
-    // Start the new server
-    startServer();
-
-    // Wait for the new server to be ready
     try {
-      await waitForServer(90000);  // PyTorch can take 60s+
+      await server.waitForServer(90000);
       return { success: true, changed: true };
     } catch (err) {
       return { success: false, changed: true, error: `Server did not start: ${err.message}` };
     }
   });
 
-  // Settings
-  const SETTINGS_PATH = path.join(app.getPath("userData"), "settings.json");
-
-  function loadSettings() {
-    try {
-      if (fs.existsSync(SETTINGS_PATH)) {
-        return JSON.parse(fs.readFileSync(SETTINGS_PATH, "utf-8"));
-      }
-    } catch (_) {}
-    return { lang: "zh", runtime: "onnx", defaultVoice: "", closeToTray: true, animBg: true, darkMode: false };
-  }
-
-  function saveSettings(settings) {
-    try {
-      fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true });
-      fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), "utf-8");
-    } catch (_) {}
-  }
-
   ipcMain.handle("get-settings", async () => loadSettings());
 
   ipcMain.handle("set-settings", async (_event, partial) => {
     const current = loadSettings();
+    const oldPort = current.serverPort;
     Object.assign(current, partial);
     saveSettings(current);
+
+    if (partial.serverPort !== undefined && partial.serverPort !== oldPort) {
+      server.setPort(partial.serverPort);
+      server.stopServer();
+      await server.waitForPortFree(15000);
+      server.startServer(RESOURCES.root, app.isPackaged);
+      try { await server.waitForServer(45000); } catch (_) {}
+    }
     return { success: true };
   });
 
-  // I18n
+  ipcMain.handle("get-resource-paths", async () => ({
+    onnxModels: RESOURCES.onnxModelsDir,
+    audioDir: RESOURCES.audioDir,
+    voicesManifest: RESOURCES.voicesManifest,
+    root: RESOURCES.root,
+    userData: app.getPath("userData"),
+  }));
+
   ipcMain.handle("get-i18n", async (_event, lang) => {
     const langFile = path.join(__dirname, "i18n", `${lang || "zh"}.json`);
     try {
-      if (fs.existsSync(langFile)) {
-        return JSON.parse(fs.readFileSync(langFile, "utf-8"));
-      }
+      if (fs.existsSync(langFile)) return JSON.parse(fs.readFileSync(langFile, "utf-8"));
     } catch (_) {}
     return JSON.parse(fs.readFileSync(path.join(__dirname, "i18n", "zh.json"), "utf-8"));
   });
+
+  ipcMain.handle("get-app-version", async () => APP_VERSION);
 }
 
-/** 创建主窗口 */
+// ─── 窗口 ──────────────────────────────────────────────────────────────────
 function createMainWindow() {
-  if (mainWindow) {
-    mainWindow.show();
-    mainWindow.focus();
-    return;
-  }
+  if (mainWindow) { mainWindow.show(); mainWindow.focus(); return; }
 
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 720,
-    minWidth: 800,
-    minHeight: 500,
+    width: 1000, height: 720, minWidth: 800, minHeight: 500,
     title: "MOSS-TTS-Nano",
     titleBarStyle: "hiddenInset",
     webPreferences: {
@@ -298,110 +191,63 @@ function createMainWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "index.html"));
   mainWindow.on("close", (event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      mainWindow.hide();
-    }
+    if (!server.getQuitting()) { event.preventDefault(); mainWindow.hide(); }
   });
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  mainWindow.on("closed", () => { mainWindow = null; });
 }
 
-/** 创建系统托盘 */
+// ─── 托盘 ──────────────────────────────────────────────────────────────────
 function createTray() {
   const iconPath = path.join(__dirname, "icons", process.platform === "darwin" ? "tray-icon.png" : "icon.png");
   let trayIcon;
   try {
-    trayIcon = nativeImage.createFromPath(iconPath);
-    trayIcon = trayIcon.resize({ width: 22, height: 22 });
-  } catch (_) {
-    // 如果没有图标，创建一个 22x22 的纯色图标
-    trayIcon = nativeImage.createEmpty();
-  }
+    trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 22, height: 22 });
+  } catch (_) { trayIcon = nativeImage.createEmpty(); }
 
   tray = new Tray(trayIcon);
   tray.setToolTip("MOSS-TTS-Nano");
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: "打开主界面",
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        } else {
-          createMainWindow();
-        }
-      },
-    },
+    { label: "打开主界面", click: () => { mainWindow ? (mainWindow.show(), mainWindow.focus()) : createMainWindow(); } },
     { type: "separator" },
-    {
-      label: "服务状态",
-      enabled: false,
-      id: "server-status",
-    },
+    { label: "服务状态", enabled: false, id: "server-status" },
     { type: "separator" },
-    {
-      label: "退出",
-      click: () => {
-        isQuitting = true;
-        stopServer();
-        app.quit();
-      },
-    },
+    { label: "退出", click: () => { server.setQuitting(true); server.stopServer(); app.quit(); } },
   ]);
 
   tray.setContextMenu(contextMenu);
-  tray.on("double-click", () => {
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-    } else {
-      createMainWindow();
-    }
-  });
+  tray.on("double-click", () => { mainWindow ? (mainWindow.show(), mainWindow.focus()) : createMainWindow(); });
 
-  // 定期更新服务状态
   setInterval(() => {
-    const statusItem = contextMenu.getMenuItemById("server-status");
-    if (!statusItem) return;
-    http
-      .get(`${SERVER_URL}/health`, (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            const info = JSON.parse(data);
-            statusItem.label = `✓ 运行中  │ ${info.device || "cpu"}`;
-          } catch (_) {
-            statusItem.label = `✓ 运行中`;
-          }
-        });
-      })
-      .on("error", () => {
-        statusItem.label = `✗ 服务未就绪`;
-      });
+    const item = contextMenu.getMenuItemById("server-status");
+    if (!item) return;
+    http.get(`http://localhost:${server.getPort()}/health`, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => { try { item.label = `✓ 运行中  │ ${JSON.parse(data).device || "cpu"}`; } catch (_) { item.label = "✓ 运行中"; } });
+    }).on("error", () => { item.label = "✗ 服务未就绪"; });
   }, 5000);
 }
 
-// ─── 应用生命周期 ──────────────────────────────────────────────────────────
-
+// ─── 生命周期 ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   registerIpcHandlers();
 
-  // 启动后端
-  startServer();
+  const settings = loadSettings();
+  if (settings.serverPort) server.setPort(settings.serverPort);
+  if (settings.runtime) server.setRuntime(settings.runtime);
 
-  // 等待后端就绪
+  // 开机自启始终开启
+  try { app.setLoginItemSettings({ openAtLogin: true }); } catch (_) {}
+
+  server.startServer(RESOURCES.root, app.isPackaged);
+
   try {
-    await waitForServer();
+    await server.waitForServer();
     console.log("[app] Server is ready");
   } catch (err) {
     console.error("[app] Server startup failed:", err.message);
     dialog.showErrorBox("启动失败", `语音合成服务启动超时，请检查日志。\n${err.message}`);
-    // 即使超时也尝试打开界面（可能只是慢）
   }
 
   createTray();
@@ -409,24 +255,9 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  // macOS 上不退出，保留托盘
-  if (process.platform !== "darwin") {
-    isQuitting = true;
-    stopServer();
-    app.quit();
-  }
+  if (process.platform !== "darwin") { server.setQuitting(true); server.stopServer(); app.quit(); }
 });
 
-app.on("before-quit", () => {
-  isQuitting = true;
-  stopServer();
-});
+app.on("before-quit", () => { server.setQuitting(true); server.stopServer(); });
 
-app.on("activate", () => {
-  // macOS 点击 Dock 图标时重新显示窗口
-  if (mainWindow) {
-    mainWindow.show();
-  } else {
-    createMainWindow();
-  }
-});
+app.on("activate", () => { mainWindow ? mainWindow.show() : createMainWindow(); });

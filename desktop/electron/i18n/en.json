@@ -95,14 +95,14 @@
     "editNoChange": "Keep current",
     "submitEdit": "Save",
     "saving": "Saving...",
-    "saved_": "Saved",
+    "saved": "Saved",
     "saveErr": "Save failed: ",
     "deleteTitle": "Delete Voice",
     "deleteConfirm": "Are you sure you want to delete {name}? The audio file will also be deleted.",
     "cancel": "Cancel",
     "delete_": "Delete",
     "deleting": "Deleting...",
-    "deleted_": "Deleted: ",
+    "deleted": "Deleted: ",
     "deleteErr": "Delete failed: "
   },
   "book": {
@@ -115,14 +115,12 @@
     "noChapters": "Click \"Import Chapters\" to add TXT files.\nMulti-select supported."
   },
   "settings": {
-    "preferences": "Preferences",
-    "voiceLabel": "Voice",
     "about": "About",
+    "general": "General",
+    "appearance": "Appearance",
+    "engine": "Engine",
     "backend": "Backend: ",
     "backendChecking": "Checking...",
-    "version": "MOSS-TTS-Nano v1.0.0",
-    "startup": "Auto-start at login",
-    "startupDesc": "Automatically start the TTS service at login",
     "closeToTray": "Minimize to tray on close",
     "closeToTrayDesc": "Keep running in the system tray when closing the window",
     "defaultVoice": "Default Voice",
@@ -148,6 +146,8 @@
     "orbOpacityDesc": "Visibility of background orbs",
     "darkMode": "Dark Mode",
     "darkModeDesc": "Dark background, easier on the eyes",
+    "serverPort": "Server Port",
+    "serverPortDesc": "TTS service port, restart required on change",
     "repoLink": "GitHub Repository"
   }
 }

@@ -17,8 +17,14 @@
     },
     "files": [
       "main.js",
+      "server.js",
       "preload.js",
       "index.html",
+      "style.css",
+      "app.js",
+      "voices.js",
+      "version.json",
+      "i18n/**/*",
       "icons/**/*"
     ],
     "extraResources": [
@@ -26,13 +32,27 @@
         "from": "../binaries/${os}/",
         "to": "server",
         "filter": ["**/*"]
+      },
+      {
+        "from": "../onnx",
+        "to": "onnx",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../assets/audio/voices.json",
+        "to": "assets/audio/voices.json"
       }
+    ],
+    "asarUnpack": [
+      "server.js"
     ],
     "mac": {
       "target": ["dmg"],
       "icon": "icons/icon.icns",
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
       "artifactName": "MossTTS-${version}-mac-${arch}.${ext}"
     },
     "win": {

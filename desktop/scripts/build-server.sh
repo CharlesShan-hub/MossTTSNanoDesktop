@@ -36,7 +36,7 @@ cd "$REPO_ROOT"
 pip install pyinstaller
 
 pyinstaller --clean --noconfirm \
-  --name "${BIN_NAME%"${BIN_NAME#moss-tts-server}"}" \
+  --name "moss-tts-server" \
   --onefile \
   --add-data "assets:assets" \
   --hidden-import "uvicorn.logging" \
@@ -45,18 +45,12 @@ pyinstaller --clean --noconfirm \
   --hidden-import "uvicorn.protocols.websockets.auto" \
   --hidden-import "sentencepiece" \
   --hidden-import "onnxruntime" \
+  --hidden-import "soundfile" \
   --distpath "$OUTPUT_DIR" \
-  app_onnx.py
-
-# 重命名输出
-if [ -f "${OUTPUT_DIR}/app_onnx" ]; then
-  mv "${OUTPUT_DIR}/app_onnx" "${OUTPUT_DIR}/${BIN_NAME}"
-elif [ -f "${OUTPUT_DIR}/app_onnx.exe" ]; then
-  mv "${OUTPUT_DIR}/app_onnx.exe" "${OUTPUT_DIR}/${BIN_NAME}"
-fi
+  src/app.py
 
 # 清理临时构建文件
-rm -rf "${REPO_ROOT}/build" "${REPO_ROOT}/app_onnx.spec"
+rm -rf "${REPO_ROOT}/build" "${REPO_ROOT}/moss-tts-server.spec"
 
 echo "==> Done! Binary: ${OUTPUT_DIR}/${BIN_NAME}"
 echo "    Size: $(du -h "${OUTPUT_DIR}/${BIN_NAME}" | cut -f1)"

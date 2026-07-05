@@ -95,14 +95,14 @@
     "editNoChange": "不更换",
     "submitEdit": "保存",
     "saving": "保存中...",
-    "saved_": "已保存",
+    "saved": "已保存",
     "saveErr": "保存失败: ",
     "deleteTitle": "删除音色",
     "deleteConfirm": "确定要删除 {name} 吗？音频文件也会被删除。",
     "cancel": "取消",
     "delete_": "删除",
     "deleting": "删除中...",
-    "deleted_": "已删除: ",
+    "deleted": "已删除: ",
     "deleteErr": "删除失败: "
   },
   "book": {
@@ -115,14 +115,12 @@
     "noChapters": "点击「导入章节」添加 TXT 文件\n支持多选"
   },
   "settings": {
-    "preferences": "偏好设置",
-    "voiceLabel": "音色",
     "about": "关于",
+    "general": "通用",
+    "appearance": "外观",
+    "engine": "引擎",
     "backend": "后端: ",
     "backendChecking": "检测中...",
-    "version": "MOSS-TTS-Nano v1.0.0",
-    "startup": "开机自动启动服务",
-    "startupDesc": "登录时自动在后台启动语音合成服务",
     "closeToTray": "关闭窗口时最小化到托盘",
     "closeToTrayDesc": "点击红色 × 不退出应用，保留在托盘",
     "defaultVoice": "默认音色",
@@ -148,6 +146,8 @@
     "orbOpacityDesc": "光球在背景中的可见程度",
     "darkMode": "暗黑模式",
     "darkModeDesc": "深色背景，护眼省电",
+    "serverPort": "后端端口",
+    "serverPortDesc": "语音合成服务端口，修改后需重启",
     "repoLink": "GitHub 仓库"
   }
 }

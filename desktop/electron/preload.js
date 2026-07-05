@@ -31,4 +31,10 @@ contextBridge.exposeInMainWorld("mossTTS", {
   // External link
   openExternal: (url) =>
     ipcRenderer.invoke("open-external", url),
+  // Resource paths
+  getResourcePaths: () =>
+    ipcRenderer.invoke("get-resource-paths"),
+  // App version
+  getAppVersion: () =>
+    ipcRenderer.invoke("get-app-version"),
 });
