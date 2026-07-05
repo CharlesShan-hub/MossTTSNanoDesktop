@@ -1,0 +1,58 @@
+{
+  "name": "moss-tts-nano-desktop",
+  "version": "1.0.0",
+  "description": "MOSS-TTS-Nano Desktop — 轻量级语音合成桌面应用",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-mac": "electron-builder --mac --arm64",
+    "build-win": "electron-builder --win --x64",
+    "build-linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.moss.tts-nano.desktop",
+    "productName": "MOSS-TTS-Nano",
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "icons/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../binaries/${os}/",
+        "to": "server",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": ["dmg"],
+      "icon": "icons/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "artifactName": "MossTTS-${version}-mac-${arch}.${ext}"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "icons/icon.ico",
+      "artifactName": "MossTTS-${version}-win-x64.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "icons/icon.png",
+      "artifactName": "MossTTS-${version}-linux-x64.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

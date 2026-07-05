@@ -369,10 +369,11 @@ def _run_serve_pytorch(args: argparse.Namespace) -> int:
 
 
 def _run_serve_onnx(args: argparse.Namespace) -> int:
-    import app_onnx as app_onnx_module
+    import app as app_module
 
     _validate_onnx_serve_args(args)
     app_argv = [
+        "--runtime", "onnx",
         "--output-dir",
         str(args.output_dir),
         "--host",
@@ -390,7 +391,7 @@ def _run_serve_onnx(args: argparse.Namespace) -> int:
         app_argv.extend(["--model-dir", str(args.onnx_model_dir)])
     if args.share:
         app_argv.append("--share")
-    app_onnx_module.main(app_argv)
+    app_module.main(app_argv)
     return 0
 
 

@@ -23,10 +23,10 @@ Documentation = "https://studio.mosi.cn/docs/moss-tts-nano"
 moss-tts-nano = "moss_tts_nano.cli:main"
 
 [tool.setuptools]
-packages = ["moss_tts_nano"]
+package-dir = {"" = "src"}
+packages = ["moss_tts_nano", "moss_tts_server"]
 py-modules = [
   "app",
-  "app_onnx",
   "infer",
   "infer_onnx",
   "moss_tts_nano_runtime",

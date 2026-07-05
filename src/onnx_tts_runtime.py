@@ -16,7 +16,7 @@ from moss_tts_nano.defaults import DEFAULT_OUTPUT_DIR
 from text_normalization_pipeline import WeTextProcessingManager, prepare_tts_request_texts
 
 APP_DIR = Path(__file__).resolve().parent
-REPO_ROOT = APP_DIR
+REPO_ROOT = APP_DIR.parent
 from ort_cpu_runtime import (
     OrtCpuRuntime,
     _normalize_sample_mode,
