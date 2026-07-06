@@ -1,0 +1,52 @@
+# MOSS-TTS-Nano .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+*.spec
+*.manifest
+
+# Environments
+.env
+.venv
+env/
+venv/
+.pixi/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated audio
+generated_audio/
+*.wav
+*.mp3
+*.flac
+
+# Model weights
+weights/
+models/
+
+# Uploads
+.app_prompt_uploads/
+
+# Desktop build
+desktop/binaries/
+desktop/dist/
+desktop/electron/node_modules/
+desktop/electron/icons/icon.png
+desktop/electron/icons/icon-*.png
+desktop/electron/icons/icon.icns
+desktop/electron/icons/tray-icon.png
+
+# Cache
+.cache/
+*.log

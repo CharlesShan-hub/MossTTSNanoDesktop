@@ -1,39 +1,17 @@
-# CTTS — Desktop GUI for MOSS-TTS-Nano
+# moss_tts_nano
 
-CTTS (Charles TTS) is an **Electron desktop wrapper** for [**MOSS-TTS-Nano**](https://github.com/OpenMOSS/MOSS-TTS-Nano), an open-source multilingual tiny speech generation model (0.1B parameters) capable of real-time voice cloning on CPU.
+A new Flutter project.
 
-> **For algorithm details, model training, and finetuning**, visit the upstream repo: [OpenMOSS/MOSS-TTS-Nano](https://github.com/OpenMOSS/MOSS-TTS-Nano)
+## Getting Started
 
-## Features
+This project is a starting point for a Flutter application.
 
-- **Cross-platform desktop app** (macOS / Windows / Linux)
-- **Voice management** — import, filter, search, preview voices
-- **Audiobook mode** — batch generate from TXT chapters
-- **ONNX / PyTorch runtime** switching without restart
-- **Animated background** with floating orbs and waves
-- **Dark mode** and **i18n** (中文 / English)
-- **Configurable server port** — no port conflict worries
+A few resources to get you started if this is your first Flutter project:
 
-## Quick Start (Development)
+- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
+- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
 
-```bash
-# 1. Start the Python inference server
-pixi run serve-onnx
-
-# 2. Start the Electron app
-cd desktop/electron
-npm install
-npm start
-```
-
-The app will auto-connect to `http://localhost:18083`.
-
-## Build (Packaged App)
-
-See [desktop/README.md](desktop/README.md) for build instructions.
-
-## License
-
-This project is licensed under the **Apache 2.0** license — see the [LICENSE](LICENSE) file.
-
-The underlying MOSS-TTS-Nano model is also Apache 2.0.
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
