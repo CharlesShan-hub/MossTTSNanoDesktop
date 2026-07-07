@@ -8,7 +8,7 @@
 PRODUCT_NAME = moss_tts_nano
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.mosstts.mossTtsNano
+PRODUCT_BUNDLE_IDENTIFIER = com.example.mossTtsNano
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.mosstts. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.

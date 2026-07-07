@@ -1,86 +1,49 @@
-import 'dart:convert';
-
 class Voice {
   final String id;
   final String name;
-  final String? language;
-  final String? description;
-  final String audioPath;
-  final bool isHidden;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
+  final String file;
+  final String language;
+  final String description;
+  final bool hidden;
+  final bool isUserVoice;
 
-  Voice({
+  const Voice({
     required this.id,
     required this.name,
-    this.language,
-    this.description,
-    required this.audioPath,
-    this.isHidden = false,
-    required this.createdAt,
-    this.updatedAt,
+    required this.file,
+    required this.language,
+    required this.description,
+    required this.hidden,
+    this.isUserVoice = false,
   });
 
+  factory Voice.fromJson(String id, Map<String, dynamic> json, {bool isUserVoice = false}) {
+    return Voice(
+      id: id,
+      name: json['name'] as String? ?? id,
+      file: json['file'] as String? ?? '',
+      language: json['language'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      hidden: json['hidden'] as bool? ?? false,
+      isUserVoice: isUserVoice,
+    );
+  }
+
   Voice copyWith({
-    String? id,
     String? name,
+    String? file,
     String? language,
     String? description,
-    String? audioPath,
-    bool? isHidden,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    bool? hidden,
   }) {
     return Voice(
-      id: id ?? this.id,
+      id: id,
       name: name ?? this.name,
+      file: file ?? this.file,
       language: language ?? this.language,
       description: description ?? this.description,
-      audioPath: audioPath ?? this.audioPath,
-      isHidden: isHidden ?? this.isHidden,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      hidden: hidden ?? this.hidden,
+      isUserVoice: isUserVoice,
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'language': language,
-      'description': description,
-      'audioPath': audioPath,
-      'isHidden': isHidden,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
-
-  factory Voice.fromJson(Map<String, dynamic> json) {
-    return Voice(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      language: json['language'] as String?,
-      description: json['description'] as String?,
-      audioPath: json['audioPath'] as String,
-      isHidden: json['isHidden'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : null,
-    );
-  }
-
-  @override
-  String toString() => jsonEncode(toJson());
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Voice &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
 }
