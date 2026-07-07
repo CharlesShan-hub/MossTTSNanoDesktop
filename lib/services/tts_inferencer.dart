@@ -172,6 +172,7 @@ class TtsInferencer {
         // Python: next_row = np.full((1, 1, row_width), audio_pad_token_id, dtype=np.int32)
         //          next_row[0, 0, 0] = audio_assistant_slot_token_id
         final nr = Int32List(_nVq + 1);
+        for (var i = 0; i < nr.length; i++) nr[i] = _pad; // Python: np.full(... audio_pad_token_id)
         nr[0] = _slotAsst;
         for (var i = 0; i < frame.length && i < _nVq; i++) nr[i + 1] = frame[i];
         final nro = OrtValueTensor.createTensorWithDataList(nr, [1, 1, _nVq + 1]);
