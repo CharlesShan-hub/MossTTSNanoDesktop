@@ -27,11 +27,42 @@ class MossTokenizer {
     );
   }
 
+  /// 常见中文标点 → 英文标点映射。
+  /// dart_sentencepiece_tokenizer 对中文全角标点分词不准确，
+  /// 而 Python 对中英文标点编码结果相同，所以先做替换。
+  static final _punctMap = <int, int>{
+    0x3001: 0x2C,  // 、 → ,
+    0x3002: 0x2E,  // 。 → .
+    0xFF0C: 0x2C,  // ， → ,
+    0xFF01: 0x21,  // ！ → !
+    0xFF1F: 0x3F,  // ？ → ?
+    0xFF1B: 0x3B,  // ； → ;
+    0xFF1A: 0x3A,  // ： → :
+    0xFF08: 0x28,  // （ → (
+    0xFF09: 0x29,  // ） → )
+    0xFF5E: 0x7E,  // ～ → ~
+    0x2018: 0x27,  // ‘ → '
+    0x2019: 0x27,  // ’ → '
+    0x201C: 0x22,  // “ → "
+    0x201D: 0x22,  // ” → "
+    0x2014: 0x2D,  // — → -
+    0x2026: 0x2E,  // … → .
+    0x3003: 0x22,  // 〃 → "
+    0x00B7: 0x2D,  // · → -
+  };
+
   /// encode_text — 将文本编码为 token ID 列表。
   /// Python: sp_model.encode(str(text or ""), out_type=int)
   List<int> encodeText(String text) {
-    final encoding = _tokenizer!.encode(text);
-    return encoding.ids.toList();
+    // 先替换中文标点为英文，避免 dart_sentencepiece_tokenizer 分词错误
+    final normalized = String.fromCharCodes(text.runes.map((r) => _punctMap[r] ?? r));
+    final encoding = _tokenizer!.encode(normalized);
+    final ids = encoding.ids.toList();
+    // 将替换产生的英文标点 token 映射回中文标点 token，与 Python 一致
+    final Map<int, int> tokenRemap = {
+      10380: 10382,  // . → 。
+    };
+    return ids.map((id) => tokenRemap[id] ?? id).toList();
   }
 
   /// count_text_tokens — 统计文本对应的 token 数量。
@@ -41,57 +72,57 @@ class MossTokenizer {
   }
 
   /// 将文本按 token 预算切分为块，模仿 Python OnnxTtsRuntime.split_voice_clone_text。
-  /// 优先在标点处切分，兜底用二分搜索找字符级切分点。
+  /// Python 策略：先按句末标点（。！？；）切分句子，再按子句标点（，、；：）切分，
+  /// 最后合并成 ≤maxTokens 的块。保证块边界在句末。
   List<String> splitTextByTokenBudget(String text, {int maxTokens = 75}) {
     final t = text.trim();
     if (t.isEmpty || countTokens(t) <= maxTokens) return [t];
 
-    final chunks = <String>[];
-    String remaining = t;
+    // 1. 按句子终结标点切分
+    final sentenceEnd = {0x3002, 0xFF01, 0xFF1F, 0xFF1B}; // 。！？；
+    final clauseEnd = {0xFF0C, 0x3001, 0xFF1B, 0xFF1A, 0x002C, 0x0020}; // ，、；：, 空格
+    final closing = {0x0022, 0x0027, 0x2019, 0x201D, 0xFF09, 0x300B, 0x3011}; // 闭合引号括号
 
-    while (remaining.isNotEmpty) {
-      if (countTokens(remaining) <= maxTokens) {
-        chunks.add(remaining);
-        break;
-      }
-
-      // 二分搜索找到不超过 maxTokens 的最长前缀
-      int low = 1, high = remaining.length, bestPos = 1;
-      while (low <= high) {
-        final mid = (low + high) >> 1;
-        if (countTokens(remaining.substring(0, mid)) <= maxTokens) {
-          bestPos = mid;
-          low = mid + 1;
-        } else {
-          high = mid - 1;
+    List<String> splitByPunct(String s, Set<int> punct) {
+      final result = <String>[];
+      final buf = <int>[];
+      for (var i = 0; i < s.length; i++) {
+        final code = s.codeUnitAt(i);
+        buf.add(code);
+        if (punct.contains(code)) {
+          while (i + 1 < s.length && closing.contains(s.codeUnitAt(i + 1))) {
+            i++;
+            buf.add(s.codeUnitAt(i));
+          }
+          result.add(String.fromCharCodes(buf).trim());
+          buf.clear();
         }
       }
-
-      // 往前找最近的标点/空格作为切分点
-      int adjusted = bestPos;
-      final start = bestPos > 25 ? bestPos - 25 : 0;
-      for (int i = bestPos - 1; i >= start; i--) {
-        final c = remaining.codeUnitAt(i);
-        // 句子终结标点: 。！？；：
-        if (c == 0x3002 || c == 0xFF01 || c == 0xFF1F ||
-            c == 0xFF1B || c == 0xFF1A ||
-            c == 0x002E || c == 0x0021 || c == 0x003F ||
-            c == 0x003B || c == 0x003A) {
-          adjusted = i + 1;
-          break;
-        }
-        // 子句/停顿标点: ，,、 和空格
-        if (c == 0xFF0C || c == 0x002C || c == 0x3001 || c == 0x0020) {
-          adjusted = i + 1;
-          break;
-        }
-      }
-
-      final part = remaining.substring(0, adjusted).trim();
-      if (part.isNotEmpty) chunks.add(part);
-      remaining = remaining.substring(adjusted).trim();
+      if (buf.isNotEmpty) result.add(String.fromCharCodes(buf).trim());
+      return result.where((s) => s.isNotEmpty).toList();
     }
 
-    return chunks.length > 1 ? chunks : [text];
+    // 先按句末标点拆
+    var pieces = splitByPunct(t, sentenceEnd);
+    if (pieces.length <= 1) {
+      // 没有句末标点，按子句标点拆
+      pieces = splitByPunct(t, clauseEnd);
+    }
+
+    // 2. 合并成 ≤maxTokens 的块
+    final chunks = <String>[];
+    String current = '';
+    for (final piece in pieces) {
+      final candidate = current.isEmpty ? piece : '$current $piece';
+      if (countTokens(candidate) <= maxTokens) {
+        current = candidate;
+      } else {
+        if (current.isNotEmpty) chunks.add(current);
+        current = piece;
+      }
+    }
+    if (current.isNotEmpty) chunks.add(current);
+
+    return chunks.length > 1 ? chunks : [t];
   }
 }

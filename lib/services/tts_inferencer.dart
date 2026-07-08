@@ -14,6 +14,8 @@ class TtsInferencer {
   final Map<String, dynamic> manifest;
   final Map<String, dynamic> codecMeta;
   final Random _rng;
+  final List<List<double>>? _precomputed;
+  int _stepIndex = 0;
 
   TtsInferencer({
     required this.sessions,
@@ -21,7 +23,9 @@ class TtsInferencer {
     required this.manifest,
     required this.codecMeta,
     int? seed,
-  }) : _rng = Random(seed ?? 1234);
+    List<List<double>>? precomputed,
+  })  : _rng = Random(seed ?? 1234),
+        _precomputed = precomputed;
 
   // ─── helpers ── 与 Python self.manifest["tts_config"] / model_config 对应
 
@@ -141,13 +145,16 @@ class TtsInferencer {
           final gho = OrtValueTensor.createTensorWithDataList(gh, [1, hiddenSize]);
           final rpo = OrtValueTensor.createTensorWithDataList(rflat, [1, _nVq, codebookSize]);
           // Python: assistant_random_u = np.asarray([min(0.99999994, max(0.0, float(self.rng.random())))], dtype=np.float32)
-          final aro = OrtValueTensor.createTensorWithDataList(Float32List.fromList(
-            [min(0.99999994, max(0.0, _rng.nextDouble()))],
-          ), [1]);
+          final arv = (_precomputed != null && _stepIndex < _precomputed!.length)
+              ? _precomputed![_stepIndex][0]
+              : min(0.99999994, max(0.0, _rng.nextDouble())) as double;
           // Python: audio_random_u = np.asarray([[min(0.99999994, max(0.0, float(self.rng.random()))) for _ in range(n_vq)]], dtype=np.float32)
-          final auo = OrtValueTensor.createTensorWithDataList(Float32List.fromList(
-            List.generate(_nVq, (_) => min(0.99999994, max(0.0, _rng.nextDouble()))),
-          ), [1, _nVq]);
+          final aurs = (_precomputed != null && _stepIndex < _precomputed!.length)
+              ? _precomputed![_stepIndex].sublist(1)
+              : List.generate(_nVq, (_) => min(0.99999994, max(0.0, _rng.nextDouble())) as double);
+          _stepIndex++;
+          final aro = OrtValueTensor.createTensorWithDataList(Float32List.fromList([arv]), [1]);
+          final auo = OrtValueTensor.createTensorWithDataList(Float32List.fromList(aurs), [1, _nVq]);
           try {
             final lout = await sessions['local_fixed_sampled_frame']!.runAsync(ropts, {
               'global_hidden': gho, 'repetition_seen_mask': rpo,
@@ -160,7 +167,6 @@ class TtsInferencer {
             if (scVal != 1) break;
             // Python: frame_token_ids = np.asarray(named_outputs["frame_token_ids"]).reshape(-1).tolist()
             frame = _read1dIntList(lnamed['frame_token_ids']!.value);
-            debugPrint('[tts_inferencer] step=$step should_continue=$scVal frame_len=${frame.length}');
           } finally { gho.release(); rpo.release(); aro.release(); auo.release(); }
         } else {
           throw UnimplementedError('only fixed mode');
@@ -244,10 +250,25 @@ class TtsInferencer {
       final channels = _int(codecMeta['codec_config']['channels']);
       final waveforms = <Float64List>[];
       final audio3d = _to3dDouble(rawAudio);
+      if (audio3d.isEmpty || audio3d[0].isEmpty) {
+        debugPrint('[AUDIO] ERROR: audio3d is empty or malformed');
+        return DecodeAudioResult(waveforms: [], audioLength: 0);
+      }
       for (var c = 0; c < channels; c++) {
         final channelData = audio3d[0][c];
         final end = audioLength.clamp(0, channelData.length);
         waveforms.add(Float64List.fromList(channelData.sublist(0, end)));
+      }
+      // 打印音频统计
+      if (waveforms.isNotEmpty && waveforms[0].isNotEmpty) {
+        final ch0 = waveforms[0];
+        double min = ch0[0], max = ch0[0], sum = 0;
+        for (var i = 0; i < ch0.length; i++) {
+          final v = ch0[i];
+          if (v < min) min = v;
+          if (v > max) max = v;
+          sum += v.abs();
+        }
       }
       return DecodeAudioResult(waveforms: waveforms, audioLength: audioLength);
     } finally { co.release(); lo.release(); ropts.release(); }
@@ -269,22 +290,6 @@ class TtsInferencer {
 
   /// Python: _extract_last_hidden
   Float32List _lastHidden(dynamic val, int h) {
-    // 调试：打印 global_hidden 的实际格式
-    debugPrint('[tts_inferencer] _lastHidden type=${val.runtimeType} '
-        'isList=${val is List} '
-        'len=${val is List ? val.length : "N/A"}');
-    if (val is List && val.isNotEmpty) {
-      debugPrint('[tts_inferencer] _lastHidden val[0] type=${val[0].runtimeType} '
-          'isList=${val[0] is List} '
-          'len=${val[0] is List ? (val[0] as List).length : "N/A"}');
-      if (val[0] is List && (val[0] as List).isNotEmpty) {
-        final inner = val[0] as List;
-        debugPrint('[tts_inferencer] _lastHidden val[0][0] type=${inner[0].runtimeType} '
-            'isList=${inner[0] is List} '
-            'len=${inner[0] is List ? (inner[0] as List).length : "N/A"}');
-      }
-    }
-
     // 3D: [1, seq, hidden] → 取 [0, -1, :]
     if (val is List) {
       if (val.isNotEmpty && val[0] is List) {

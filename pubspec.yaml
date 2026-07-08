@@ -66,6 +66,7 @@ flutter:
     - assets/i18n/
     - assets/models/MOSS-TTS-Nano-100M-ONNX/
     - assets/models/MOSS-Audio-Tokenizer-Nano-ONNX/
+    - assets/random_values.json
     - assets/web/
 
   # An image asset can refer to one or more resolution-specific "variants", see
