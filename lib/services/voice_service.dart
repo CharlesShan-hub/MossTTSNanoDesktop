@@ -35,6 +35,34 @@ class VoiceService {
     return voicesDir;
   }
 
+  /// 内置音色覆盖文件路径
+  static Future<File> get _builtinOverridesFile async {
+    final dir = await _appDir;
+    return File('${dir.path}/builtin_overrides.json');
+  }
+
+  static Map<String, Map<String, String?>> _builtinOverrides = {};
+
+  static Future<void> _loadBuiltinOverrides() async {
+    final file = await _builtinOverridesFile;
+    if (!file.existsSync()) return;
+    try {
+      final raw = await file.readAsString();
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      _builtinOverrides = map.map((k, v) => MapEntry(
+        k,
+        (v as Map<String, dynamic>).map((k2, v2) => MapEntry(k2, v2 as String?)),
+      ));
+    } catch (_) {
+      _builtinOverrides = {};
+    }
+  }
+
+  static Future<void> _saveBuiltinOverrides() async {
+    final file = await _builtinOverridesFile;
+    await file.writeAsString(jsonEncode(_builtinOverrides));
+  }
+
   /// 加载所有音色（内置 + 用户）
   static Future<List<Voice>> loadVoices() async {
     if (!_loaded) {
@@ -44,11 +72,48 @@ class VoiceService {
       _builtinVoices = map.entries
           .map((e) => Voice.fromJson(e.key, e.value as Map<String, dynamic>, isUserVoice: false))
           .toList();
+      // 应用内置音色的编辑覆盖
+      await _loadBuiltinOverrides();
+      _builtinVoices = _builtinVoices.map((v) {
+        final override = _builtinOverrides[v.id];
+        if (override == null) return v;
+        return v.copyWith(
+          name: override['name'],
+          language: override['language'],
+          description: override['description'],
+        );
+      }).toList();
       _loaded = true;
     }
     // 加载用户音色
     await _loadUserVoices();
     return [..._builtinVoices, ..._userVoices];
+  }
+
+  /// 更新内置音色元数据（持久化覆盖）
+  static Future<void> updateBuiltinVoice({
+    required String id,
+    String? name,
+    String? language,
+    String? description,
+  }) async {
+    final existing = _builtinOverrides[id] ?? {};
+    _builtinOverrides[id] = {
+      ...existing,
+      if (name != null && name.isNotEmpty) 'name': name,
+      if (language != null) 'language': language,
+      if (description != null) 'description': description,
+    };
+    await _saveBuiltinOverrides();
+    // 同步更新内存中的内置音色
+    final idx = _builtinVoices.indexWhere((v) => v.id == id);
+    if (idx != -1) {
+      _builtinVoices[idx] = _builtinVoices[idx].copyWith(
+        name: name,
+        language: language,
+        description: description,
+      );
+    }
   }
 
   /// 加载用户自定义音色

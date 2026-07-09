@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -26,12 +27,12 @@ const kTextSecondary = Color(0xFF86868B);
 const kTextMuted     = Color(0xFFA1A1A6);
 const kBorder      = Color(0xFFD2D2D7);
 
-// 玻璃态
-const kGlassWhite  = Color(0xCCFFFFFF);   // 80% 白
-const kGlassBg     = Color(0x80F5F5F7);   // 50% 背景
-const kGlassBorder = Color(0x4DD2D2D7);   // 30% 边框
-const kGlassShadow = Color(0x1A000000);   // 10% 黑阴影
-const kBlurGlass   = 16.0;                // 玻璃模糊半径
+// 玻璃态 — 云朵般轻薄飘渺
+const kGlassWhite  = Color(0x5CFFFFFF);   // 36% 白 — 轻薄透亮
+const kGlassBg     = Color(0x2EF5F5F7);   // 18% 背景
+const kGlassBorder = Color(0x14D2D2D7);   // 8%  边框 — 几乎隐形的边缘
+const kGlassShadow = Color(0x08000000);   // 3%  阴影
+const kBlurGlass   = 10.0;                // 模糊半径 — 柔和光晕
 
 // 暗色模式
 const kDarkBg        = Color(0xFF1C1C1E);
@@ -136,7 +137,7 @@ const kRadiusXl  = 12.0;
 // ─── MossButton ───────────────────────────────────────────────────────────
 enum MossButtonType { primary, secondary, ghost }
 
-class MossButton extends StatelessWidget {
+class MossButton extends StatefulWidget {
   final String text;
   final VoidCallback? onTap;
   final MossButtonType type;
@@ -157,64 +158,132 @@ class MossButton extends StatelessWidget {
   });
 
   @override
+  State<MossButton> createState() => _MossButtonState();
+}
+
+class _MossButtonState extends State<MossButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final disabled = onTap == null || loading;
+    final disabled = widget.onTap == null || widget.loading;
+    final accent = widget.color ?? kAccent;
+
     Color bgColor;
     Color textColor;
     Color borderColor;
+    Color splashColor;
 
-    final accent = color ?? kAccent;
-
-    switch (type) {
-      case MossButtonType.primary:
-        bgColor = disabled ? accent.withValues(alpha: 0.5) : accent;
-        textColor = Colors.white;
-        borderColor = Colors.transparent;
-      case MossButtonType.secondary:
-        bgColor = disabled ? kSurface.withValues(alpha: 0.5) : kSurface;
-        textColor = disabled ? kTextMuted : kTextPrimary;
-        borderColor = kBorder;
-      case MossButtonType.ghost:
-        bgColor = Colors.transparent;
-        textColor = disabled ? kTextMuted : accent;
-        borderColor = Colors.transparent;
+    if (disabled) {
+      switch (widget.type) {
+        case MossButtonType.primary:
+          bgColor = accent.withValues(alpha: 0.5);
+          textColor = Colors.white;
+          borderColor = Colors.transparent;
+        case MossButtonType.secondary:
+          bgColor = accent.withValues(alpha: 0.04);
+          textColor = accent.withValues(alpha: 0.4);
+          borderColor = accent.withValues(alpha: 0.1);
+        case MossButtonType.ghost:
+          bgColor = Colors.transparent;
+          textColor = kTextMuted;
+          borderColor = Colors.transparent;
+      }
+      splashColor = Colors.transparent;
+    } else {
+      switch (widget.type) {
+        case MossButtonType.primary:
+          bgColor = _pressed
+              ? Color.lerp(accent, Colors.black, 0.15)!
+              : _hovered
+                  ? Color.lerp(accent, Colors.black, 0.06)!
+                  : accent;
+          textColor = Colors.white;
+          borderColor = Colors.transparent;
+          splashColor = accent.withValues(alpha: 0.3);
+        case MossButtonType.secondary:
+          bgColor = _pressed
+              ? accent.withValues(alpha: 0.18)
+              : _hovered
+                  ? accent.withValues(alpha: 0.10)
+                  : accent.withValues(alpha: 0.06);
+          textColor = accent;
+          borderColor = _hovered
+              ? accent.withValues(alpha: 0.40)
+              : accent.withValues(alpha: 0.20);
+          splashColor = accent.withValues(alpha: 0.2);
+        case MossButtonType.ghost:
+          bgColor = _pressed
+              ? accent.withValues(alpha: 0.15)
+              : _hovered
+                  ? accent.withValues(alpha: 0.07)
+                  : Colors.transparent;
+          textColor = accent;
+          borderColor = Colors.transparent;
+          splashColor = accent.withValues(alpha: 0.2);
+      }
     }
 
-    return SizedBox(
-      height: height,
-      child: Material(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(kRadiusMd),
-        child: InkWell(
-          onTap: disabled ? null : onTap,
-          borderRadius: BorderRadius.circular(kRadiusMd),
-          child: Container(
-            decoration: type == MossButtonType.secondary
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(kRadiusMd),
-                    border: Border.all(color: borderColor),
-                  )
-                : null,
-            padding: EdgeInsets.symmetric(horizontal: icon != null ? kS10 : kS16),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (loading)
-                    SizedBox(
-                      width: 14, height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: textColor.withValues(alpha: 0.7),
-                      ),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: disabled ? null : (_) => setState(() => _pressed = true),
+        onTapUp: disabled ? null : (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(kRadiusMd),
+              border: Border.all(color: borderColor),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(kRadiusMd),
+              child: InkWell(
+                onTap: disabled ? null : widget.onTap,
+                borderRadius: BorderRadius.circular(kRadiusMd),
+                splashColor: splashColor,
+                highlightColor: Colors.transparent,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: widget.icon != null ? kS10 : kS16,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.loading)
+                          SizedBox(
+                            width: 14, height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: textColor.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        if (widget.loading && widget.icon != null)
+                          const SizedBox(width: 6),
+                        if (widget.icon != null && !widget.loading) ...[
+                          Icon(widget.icon, size: 14, color: textColor),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          widget.text,
+                          style: TextStyle(fontSize: kTextBase, color: textColor),
+                        ),
+                      ],
                     ),
-                  if (loading && icon != null) const SizedBox(width: 6),
-                  if (icon != null && !loading) ...[
-                    Icon(icon, size: 14, color: textColor),
-                    const SizedBox(width: 4),
-                  ],
-                  Text(text, style: TextStyle(fontSize: kTextBase, color: textColor)),
-                ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -225,7 +294,7 @@ class MossButton extends StatelessWidget {
 }
 
 // ─── MossIconButton ───────────────────────────────────────────────────────
-class MossIconButton extends StatelessWidget {
+class MossIconButton extends StatefulWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
@@ -242,16 +311,66 @@ class MossIconButton extends StatelessWidget {
   });
 
   @override
+  State<MossIconButton> createState() => _MossIconButtonState();
+}
+
+class _MossIconButtonState extends State<MossIconButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final isActive = onTap != null;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(kRadiusSm),
-        child: Padding(
-          padding: const EdgeInsets.all(kS4),
-          child: Icon(icon, size: size, color: isActive ? (color ?? kTextSecondary) : kTextMuted),
+    final active = widget.onTap != null;
+    final iconColor = active
+        ? (widget.color ?? kTextSecondary)
+        : kTextMuted;
+    final bgColor = _pressed
+        ? iconColor.withValues(alpha: 0.15)
+        : _hovered
+            ? iconColor.withValues(alpha: 0.08)
+            : Colors.transparent;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTapDown: active ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: active ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: () => setState(() => _pressed = false),
+        child: Tooltip(
+          message: widget.tooltip,
+          waitDuration: const Duration(milliseconds: 600),
+          child: AnimatedScale(
+            scale: _pressed ? 0.92 : 1.0,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.all(kS4),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(kRadiusSm),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: active ? widget.onTap : null,
+                  borderRadius: BorderRadius.circular(kRadiusSm),
+                  splashColor: active
+                      ? iconColor.withValues(alpha: 0.2)
+                      : Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  child: Icon(
+                    widget.icon,
+                    size: widget.size,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -298,6 +417,8 @@ class MossGlassCard extends StatelessWidget {
   final double blur;
   final double? height;
   final double? width;
+  final Color? color;
+  final BorderSide? border;
 
   const MossGlassCard({
     super.key,
@@ -306,6 +427,8 @@ class MossGlassCard extends StatelessWidget {
     this.blur = kBlurGlass,
     this.height,
     this.width,
+    this.color,
+    this.border,
   });
 
   @override
@@ -319,9 +442,12 @@ class MossGlassCard extends StatelessWidget {
           height: height,
           padding: padding ?? const EdgeInsets.all(kS12),
           decoration: BoxDecoration(
-            color: kGlassWhite,
+            color: color ?? kGlassWhite,
             borderRadius: BorderRadius.circular(kRadiusLg),
-            border: Border.all(color: kGlassBorder),
+            border: Border.all(
+              color: border?.color ?? kGlassBorder,
+              width: border?.width ?? 1.0,
+            ),
           ),
           child: child,
         ),
@@ -333,25 +459,29 @@ class MossGlassCard extends StatelessWidget {
 // ─── MossGlassSidebar ──────────────────────────────────────────────────────
 class MossGlassSidebar extends StatelessWidget {
   final List<Widget> children;
+  final EdgeInsetsGeometry? margin;
 
-  const MossGlassSidebar({super.key, required this.children});
+  const MossGlassSidebar({super.key, required this.children, this.margin});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 200,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(kRadiusXl),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
-          child: Container(
-            decoration: BoxDecoration(
-              color: kGlassWhite,
-              border: Border(right: BorderSide(color: kGlassBorder)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: SizedBox(
+        width: 200,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kRadiusXl),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
+            child: Container(
+              decoration: BoxDecoration(
+                color: kGlassWhite,
+                border: Border(right: BorderSide(color: kGlassBorder)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
             ),
           ),
         ),
@@ -361,7 +491,7 @@ class MossGlassSidebar extends StatelessWidget {
 }
 
 // ─── MossBackground ──────────────────────────────────────────────────────
-/// 页面背景（渐变 + 装饰光晕）
+/// 页面背景（渐变 + 动画装饰光晕 + 漂浮装饰元素）
 class MossBackground extends StatelessWidget {
   final Widget child;
   final ColorSeries? theme;
@@ -371,19 +501,135 @@ class MossBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = theme ?? kBlue;
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             kBg,
-            c.bg.withValues(alpha: 0.3),
+            c.bg.withValues(alpha: 0.6),
             kBg,
           ],
         ),
       ),
-      child: child,
+      child: Stack(
+        children: [
+          // ── 动画装饰光晕（漂浮在玻璃面板后面） ──
+          // 大圆：慢速漂移 + 柔和脉动
+          Positioned(
+            top: -80, right: -40,
+            child: _AnimatedDecorBlob(
+              size: 280,
+              color: c.light.withValues(alpha: 0.12),
+              driftX: 30, driftY: 20,
+              pulseRate: 0.6, driftRate: 0.3,
+            ),
+          ),
+          Positioned(
+            bottom: 60, left: -60,
+            child: _AnimatedDecorBlob(
+              size: 220,
+              color: c.main.withValues(alpha: 0.10),
+              driftX: 25, driftY: 35,
+              pulseRate: 0.8, driftRate: 0.4,
+            ),
+          ),
+          // 小圆：较快节奏
+          Positioned(
+            top: 120, left: 80,
+            child: _AnimatedDecorBlob(
+              size: 120,
+              color: c.light.withValues(alpha: 0.08),
+              driftX: 15, driftY: 10,
+              pulseRate: 1.2, driftRate: 0.5,
+            ),
+          ),
+          Positioned(
+            bottom: -30, right: 100,
+            child: _AnimatedDecorBlob(
+              size: 160,
+              color: c.dark.withValues(alpha: 0.08),
+              driftX: 20, driftY: 15,
+              pulseRate: 0.9, driftRate: 0.35,
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// 动画装饰光晕圆点 — 脉动缩放 + 缓慢漂移
+class _AnimatedDecorBlob extends StatefulWidget {
+  final double size;
+  final Color color;
+  final double driftX;
+  final double driftY;
+  final double pulseRate;
+  final double driftRate;
+
+  const _AnimatedDecorBlob({
+    required this.size,
+    required this.color,
+    this.driftX = 0,
+    this.driftY = 0,
+    this.pulseRate = 1,
+    this.driftRate = 0.5,
+  });
+
+  @override
+  State<_AnimatedDecorBlob> createState() => _AnimatedDecorBlobState();
+}
+
+class _AnimatedDecorBlobState extends State<_AnimatedDecorBlob>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        final v = _ctrl.value;
+        // 脉动：sin 波在 0.75~1.25 之间平滑变化
+        final scale =
+            0.75 + 0.25 * ((math.sin(v * math.pi * 2 * widget.pulseRate) + 1) / 2);
+        // 漂移：不同频率和相位的 sin 组合，产生自然游走感
+        final dx = widget.driftX * math.sin(v * math.pi * 2 * widget.driftRate);
+        final dy = widget.driftY *
+            math.sin(v * math.pi * 2 * widget.driftRate * 0.7 + 1.3);
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+      child: Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: widget.color,
+        ),
+      ),
     );
   }
 }
@@ -415,6 +661,7 @@ class MossDropdown<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
   final String placeholder;
   final List<DropdownItem<T>> items;
+  final Color? color;
 
   const MossDropdown({
     super.key,
@@ -422,17 +669,19 @@ class MossDropdown<T> extends StatelessWidget {
     required this.onChanged,
     this.placeholder = '选择...',
     required this.items,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final accent = color ?? kAccent;
     final label = items.where((e) => e.value == value).firstOrNull?.label ?? placeholder;
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: kBg,
+        color: accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: accent.withValues(alpha: 0.20)),
       ),
       child: PopupMenuButton<T>(
         onSelected: onChanged,
@@ -440,7 +689,7 @@ class MossDropdown<T> extends StatelessWidget {
         color: kSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusLg),
-          side: const BorderSide(color: kBorder),
+          side: BorderSide(color: accent.withValues(alpha: 0.30)),
         ),
         itemBuilder: (_) => [
           for (final item in items)
@@ -450,7 +699,7 @@ class MossDropdown<T> extends StatelessWidget {
               child: Row(
                 children: [
                   if (item.value == value)
-                    const Icon(Icons.check, size: 14, color: kAccent)
+                    Icon(Icons.check, size: 14, color: accent)
                   else
                     const SizedBox(width: 14),
                   const SizedBox(width: kS8),
@@ -458,7 +707,7 @@ class MossDropdown<T> extends StatelessWidget {
                     item.label,
                     style: TextStyle(
                       fontSize: kTextBase,
-                      color: item.value == value ? kAccent : kTextPrimary,
+                      color: item.value == value ? accent : kTextPrimary,
                       fontWeight: item.value == value ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
@@ -473,7 +722,7 @@ class MossDropdown<T> extends StatelessWidget {
               Expanded(
                 child: Text(label, style: const TextStyle(fontSize: kTextBase, color: kTextPrimary)),
               ),
-              Icon(Icons.arrow_drop_down, size: 16, color: kTextSecondary),
+              Icon(Icons.arrow_drop_down, size: 16, color: accent.withValues(alpha: 0.6)),
             ],
           ),
         ),
@@ -486,6 +735,53 @@ class DropdownItem<T> {
   final String label;
   final T value;
   const DropdownItem(this.label, this.value);
+}
+
+// ─── MossGlassPanel ───────────────────────────────────────────────────────
+/// 通用的玻璃面板容器（用于右侧操作区/主内容区）
+class MossGlassPanel extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double blur;
+  final double? height;
+  final double? width;
+  final BorderRadiusGeometry? borderRadius;
+
+  const MossGlassPanel({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.blur = kBlurGlass,
+    this.height,
+    this.width,
+    this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: borderRadius ?? BorderRadius.circular(kRadiusXl),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Container(
+            width: width,
+            height: height,
+            padding: padding ?? const EdgeInsets.all(kS16),
+            decoration: BoxDecoration(
+              color: kGlassWhite,
+              borderRadius: borderRadius ?? BorderRadius.circular(kRadiusXl),
+              border: Border.all(color: kGlassBorder),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── MossSidebar ──────────────────────────────────────────────────────────
@@ -558,6 +854,7 @@ class MossTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final int? maxLines;
   final bool expands;
+  final Color? color;
 
   const MossTextField({
     super.key,
@@ -566,10 +863,12 @@ class MossTextField extends StatelessWidget {
     this.onChanged,
     this.maxLines,
     this.expands = false,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final accent = color ?? kAccent;
     return TextField(
       controller: controller,
       onChanged: onChanged,
@@ -582,17 +881,17 @@ class MossTextField extends StatelessWidget {
         hintStyle: const TextStyle(fontSize: kTextBase, color: kTextMuted),
         contentPadding: const EdgeInsets.symmetric(horizontal: kS10, vertical: kS8),
         filled: true,
-        fillColor: kBg,
+        fillColor: accent.withValues(alpha: 0.06),
         border: OutlineInputBorder(
-          borderSide: const BorderSide(color: kBorder),
+          borderSide: BorderSide(color: accent.withValues(alpha: 0.20)),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kBorder),
+          borderSide: BorderSide(color: accent.withValues(alpha: 0.20)),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kAccent),
+          borderSide: BorderSide(color: accent, width: 1.5),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         isDense: true,
@@ -682,6 +981,226 @@ class _MossStatusBarState extends State<MossStatusBar> {
           const SizedBox(width: kS8),
           Text(time, style: const TextStyle(fontSize: kTextSm, color: kTextSecondary)),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  滚动物理 — QQ 弹弹的弹簧手感
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// 弹性十足的滚动物理 — QQ 弹弹的拉长回弹手感
+class BouncyPhysics extends BouncingScrollPhysics {
+  const BouncyPhysics({super.parent});
+
+  @override
+  BouncyPhysics applyTo(ScrollPhysics? ancestor) {
+    return BouncyPhysics(parent: buildParent(ancestor));
+  }
+
+  /// 拉到底 → 弹回一点 → 干净归零
+  @override
+  SpringDescription get spring => const SpringDescription(
+    mass: 0.6,
+    stiffness: 80.0,
+    damping:8.0,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  设置页通用组件
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// 设置分组卡片
+class MossSettingsGroup extends StatelessWidget {
+  final String title;
+  final String? description;
+  final Widget child;
+
+  const MossSettingsGroup({
+    super.key,
+    required this.title,
+    this.description,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MossGlassCard(
+      padding: const EdgeInsets.all(kS16),
+      color: Colors.white.withValues(alpha: 0.30),
+      border: BorderSide(color: Colors.white.withValues(alpha: 0.40), width: 0.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(
+            fontSize: kTextMd, fontWeight: FontWeight.w600, color: kTextPrimary,
+          )),
+          if (description != null) ...[
+            const SizedBox(height: kS4),
+            Text(description!, style: const TextStyle(
+              fontSize: kTextSm, color: kTextSecondary,
+            )),
+          ],
+          const SizedBox(height: kS12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// 设置项行（label 居左，control 居右）
+class MossSettingsRow extends StatelessWidget {
+  final String label;
+  final String? hint;
+  final Widget control;
+
+  const MossSettingsRow({
+    super.key,
+    required this.label,
+    this.hint,
+    required this.control,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: kS10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(
+                  fontSize: kTextBase, color: kTextPrimary,
+                )),
+                if (hint != null)
+                  Text(hint!, style: const TextStyle(
+                    fontSize: kTextXs, color: kTextMuted,
+                  )),
+              ],
+            ),
+          ),
+          const SizedBox(width: kS12),
+          Expanded(child: control),
+        ],
+      ),
+    );
+  }
+}
+
+/// 带标签和数值显示的滑块
+class MossSettingsSlider extends StatelessWidget {
+  final String label;
+  final String? hint;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String Function(double) formatValue;
+  final ValueChanged<double> onChanged;
+
+  const MossSettingsSlider({
+    super.key,
+    required this.label,
+    this.hint,
+    required this.value,
+    this.min = 0,
+    this.max = 2,
+    this.divisions = 40,
+    required this.formatValue,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MossSettingsRow(
+      label: label,
+      hint: hint,
+      control: Row(
+        children: [
+          Expanded(
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: kAccent,
+                inactiveTrackColor: kBorder,
+                thumbColor: kAccent,
+                overlayColor: kAccent.withValues(alpha: 0.1),
+              ),
+              child: Slider(
+                value: value.clamp(min, max),
+                min: min,
+                max: max,
+                divisions: divisions,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: Text(
+              formatValue(value),
+              style: const TextStyle(fontSize: kTextSm, color: kTextSecondary),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 设置页导航项
+class MossSettingsNavItem extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  const MossSettingsNavItem({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),
+          decoration: BoxDecoration(
+            color: active ? kAccent.withValues(alpha: 0.1) : Colors.transparent,
+            border: Border(
+              left: BorderSide(
+                color: active ? kAccent : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: active ? kAccent : kTextSecondary),
+              const SizedBox(width: kS10),
+              Text(label, style: TextStyle(
+                fontSize: kTextBase,
+                color: active ? kAccent : kTextPrimary,
+                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+              )),
+            ],
+          ),
+        ),
       ),
     );
   }

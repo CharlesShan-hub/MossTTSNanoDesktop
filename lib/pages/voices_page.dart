@@ -39,6 +39,12 @@ class _VoicesPageState extends State<VoicesPage> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadHiddenIds() async {
     final file = await _configFile;
     if (!file.existsSync()) return;
@@ -90,12 +96,6 @@ class _VoicesPageState extends State<VoicesPage> {
   void _restoreBuiltin() {
     setState(() => _hiddenIds.clear());
     _saveHiddenIds();
-  }
-
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
   }
 
   Future<void> _importVoice() async {
@@ -161,12 +161,21 @@ class _VoicesPageState extends State<VoicesPage> {
       cancelText: '取消',
       confirmText: '保存',
       onConfirm: () async {
-        await VoiceService.updateVoice(
-          id: voice.id,
-          name: nameCtrl.text.trim(),
-          language: langCtrl.text.trim(),
-          description: descCtrl.text.trim(),
-        );
+        if (voice.isUserVoice) {
+          await VoiceService.updateVoice(
+            id: voice.id,
+            name: nameCtrl.text.trim(),
+            language: langCtrl.text.trim(),
+            description: descCtrl.text.trim(),
+          );
+        } else {
+          await VoiceService.updateBuiltinVoice(
+            id: voice.id,
+            name: nameCtrl.text.trim(),
+            language: langCtrl.text.trim(),
+            description: descCtrl.text.trim(),
+          );
+        }
         await _load(refresh: true);
         return true;
       },
@@ -239,7 +248,8 @@ class _VoicesPageState extends State<VoicesPage> {
   }
 
   List<Voice> get _filtered {
-    var v = _showHidden ? _allVoices : _allVoices.where((e) => !_hiddenIds.contains(e.id)).toList();
+    // 默认显示所有音色（隐藏的以低透明度展示），切换后彻底隐藏
+    var v = _showHidden ? _allVoices.where((e) => !_hiddenIds.contains(e.id)).toList() : _allVoices;
     if (_query.isNotEmpty) {
       v = v.where((e) => e.name.toLowerCase().contains(_query.toLowerCase())).toList();
     }
@@ -250,6 +260,18 @@ class _VoicesPageState extends State<VoicesPage> {
   }
 
   Set<String> get _langs => _allVoices.map((e) => e.language).toSet();
+
+  static Color _langBadgeColor(String lang) {
+    const colors = [
+      Color(0xFF4A7DA8), // 蓝
+      Color(0xFF4A9E62), // 绿
+      Color(0xFFD48C30), // 橙
+      Color(0xFF8A5FAD), // 紫
+      Color(0xFFC06040), // 红棕
+      Color(0xFF3D8A8A), // 青
+    ];
+    return colors[lang.hashCode.abs() % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -264,8 +286,10 @@ class _VoicesPageState extends State<VoicesPage> {
 
     return Row(
       children: [
-        MossGlassSidebar(children: [
-          MossSidebarSection(title: '操作', child: Column(
+        MossGlassSidebar(
+          margin: const EdgeInsets.fromLTRB(kS16, kS16, 0, kS16),
+          children: [
+            MossSidebarSection(title: '操作', child: Column(
             children: [
               SizedBox(width: double.infinity, child: MossButton(
                 text: '导入音色', icon: Icons.add,
@@ -275,6 +299,7 @@ class _VoicesPageState extends State<VoicesPage> {
               SizedBox(width: double.infinity, child: MossButton(
                 text: '刷新列表', icon: Icons.refresh,
                 type: MossButtonType.secondary,
+                color: widget.theme.main,
                 onTap: () => _load(refresh: true),
               )),
               if (_hiddenIds.isNotEmpty) ...[
@@ -282,6 +307,7 @@ class _VoicesPageState extends State<VoicesPage> {
                 SizedBox(width: double.infinity, child: MossButton(
                   text: '恢复默认音色', icon: Icons.restore,
                   type: MossButtonType.secondary,
+                  color: widget.theme.main,
                   onTap: _restoreBuiltin,
                 )),
               ],
@@ -289,10 +315,10 @@ class _VoicesPageState extends State<VoicesPage> {
               Row(
                 children: [
                   MossIconButton(
-                    icon: _showHidden ? Icons.visibility : Icons.visibility_off,
-                    tooltip: '切换隐藏音色',
+                    icon: _showHidden ? Icons.visibility_off : Icons.visibility,
+                    tooltip: _showHidden ? '显示所有音色' : '隐藏已隐藏的音色',
                     onTap: () => setState(() => _showHidden = !_showHidden),
-                    color: _showHidden ? kAccent : null,
+                    color: _showHidden ? widget.theme.main : null,
                   ),
                   const SizedBox(width: kS6),
                   Text('隐藏的音色 (${_hiddenIds.length})',
@@ -306,12 +332,14 @@ class _VoicesPageState extends State<VoicesPage> {
               MossTextField(
                 onChanged: (v) => setState(() => _query = v),
                 hintText: '搜索音色...',
+                color: widget.theme.main,
               ),
               const SizedBox(height: kS6),
               MossDropdown<String>(
                 value: _langFilter.isEmpty ? null : _langFilter,
                 onChanged: (v) => setState(() => _langFilter = v ?? ''),
                 placeholder: '全部语言',
+                color: widget.theme.main,
                 items: [
                   const DropdownItem('全部语言', ''),
                   for (final l in _langs)
@@ -329,11 +357,13 @@ class _VoicesPageState extends State<VoicesPage> {
             ),
           ),
         ]),
-        Expanded(child: Container(
-          color: kBg, padding: const EdgeInsets.all(kS16),
+        Expanded(child: MossGlassPanel(
+          margin: const EdgeInsets.all(kS16),
+          padding: const EdgeInsets.all(kS16),
           child: filtered.isEmpty
             ? Center(child: Text('没有匹配的音色', style: TextStyle(color: kTextMuted)))
             : ListView(
+                physics: const BouncyPhysics(),
                 children: [
                   for (final entry in groups.entries) ...[
                     Padding(
@@ -373,13 +403,15 @@ class _VoicesPageState extends State<VoicesPage> {
     return MossGlassCard(
       height: 150,
       padding: const EdgeInsets.all(kS12),
+      color: Colors.white.withValues(alpha: 0.45),
+      border: BorderSide(color: Colors.white.withValues(alpha: 0.50), width: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              MossBadge(text: v.language),
+              MossBadge(text: v.language, color: _langBadgeColor(v.language)),
             ],
           ),
           const SizedBox(height: kS6),
@@ -387,7 +419,7 @@ class _VoicesPageState extends State<VoicesPage> {
           if (v.description.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: kS2),
-              child: Text(v.description, style: TextStyle(fontSize: kTextSm, color: kTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(v.description, style: TextStyle(fontSize: kTextSm, color: kTextMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
             ),
           const Expanded(child: SizedBox.shrink()),
           Row(
@@ -403,13 +435,11 @@ class _VoicesPageState extends State<VoicesPage> {
                 icon: _hiddenIds.contains(v.id) ? Icons.visibility_off : Icons.visibility_outlined,
                 tooltip: _hiddenIds.contains(v.id) ? '显示' : '隐藏',
                 onTap: () => _toggleHidden(v.id),
-                color: _hiddenIds.contains(v.id) ? kTextMuted : null,
+                color: _hiddenIds.contains(v.id) ? widget.theme.main.withValues(alpha: 0.5) : null,
               ),
               const SizedBox(width: kS8),
-              if (v.isUserVoice) ...[
-                MossIconButton(icon: Icons.edit_outlined, tooltip: '编辑', onTap: () => _editVoice(v)),
-                const SizedBox(width: kS8),
-              ],
+              MossIconButton(icon: Icons.edit_outlined, tooltip: '编辑', onTap: () => _editVoice(v)),
+              const SizedBox(width: kS8),
               MossIconButton(icon: Icons.delete_outline, tooltip: '删除', onTap: () => _deleteVoice(v), color: kError),
             ],
           ),
