@@ -42,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 label: label,
                 icon: icon,
                 active: _navIndex == i,
+                color: widget.theme.main,
                 onTap: () => setState(() => _navIndex = i),
               );
             }),
@@ -57,10 +58,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildContent() {
+    final accent = widget.theme.main;
     switch (_navIndex) {
-      case 0: return _ModelSettings();
-      case 1: return _ParamSettings();
-      case 2: return _AppearanceSettings();
+      case 0: return _ModelSettings(color: accent);
+      case 1: return _ParamSettings(color: accent);
+      case 2: return _AppearanceSettings(color: accent);
       case 3: return _ShortcutsSettings();
       default: return const SizedBox.shrink();
     }
@@ -72,6 +74,9 @@ class _SettingsPageState extends State<SettingsPage> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _ModelSettings extends StatefulWidget {
+  final Color color;
+  const _ModelSettings({required this.color});
+
   @override
   State<_ModelSettings> createState() => _ModelSettingsState();
 }
@@ -114,6 +119,7 @@ class _ModelSettingsState extends State<_ModelSettings> {
                           controller: _pathCtrl,
                           hintText: '未设置，使用内置模型',
                           onChanged: (v) => SettingsService.setModelPath(v),
+                          color: widget.color,
                         ),
                       ),
                       const SizedBox(width: kS8),
@@ -121,6 +127,7 @@ class _ModelSettingsState extends State<_ModelSettings> {
                         text: '浏览',
                         icon: Icons.folder_open,
                         type: MossButtonType.secondary,
+                        color: widget.color,
                         onTap: _pickPath,
                       ),
                     ],
@@ -162,6 +169,9 @@ class _ModelSettingsState extends State<_ModelSettings> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _ParamSettings extends StatefulWidget {
+  final Color color;
+  const _ParamSettings({required this.color});
+
   @override
   State<_ParamSettings> createState() => _ParamSettingsState();
 }
@@ -201,6 +211,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                   value: _temperature,
                   min: 0.1, max: 2.0, divisions: 38,
                   formatValue: (v) => v.toStringAsFixed(2),
+                  color: widget.color,
                   onChanged: (v) {
                     setState(() => _temperature = v);
                     SettingsService.setTemperature(v);
@@ -212,6 +223,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                   value: _topK,
                   min: 1, max: 100, divisions: 99,
                   formatValue: (v) => v.round().toString(),
+                  color: widget.color,
                   onChanged: (v) {
                     setState(() => _topK = v);
                     SettingsService.setTopK(v.round());
@@ -223,6 +235,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                   value: _topP,
                   min: 0.1, max: 1.0, divisions: 18,
                   formatValue: (v) => v.toStringAsFixed(2),
+                  color: widget.color,
                   onChanged: (v) {
                     setState(() => _topP = v);
                     SettingsService.setTopP(v);
@@ -243,6 +256,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                   value: _repPenalty,
                   min: 1.0, max: 2.0, divisions: 20,
                   formatValue: (v) => v.toStringAsFixed(2),
+                  color: widget.color,
                   onChanged: (v) {
                     setState(() => _repPenalty = v);
                     SettingsService.setRepetitionPenalty(v);
@@ -254,6 +268,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                   value: _maxFrames,
                   min: 50, max: 1000, divisions: 38,
                   formatValue: (v) => v.round().toString(),
+                  color: widget.color,
                   onChanged: (v) {
                     setState(() => _maxFrames = v);
                     SettingsService.setMaxFrames(v.round());
@@ -273,6 +288,7 @@ class _ParamSettingsState extends State<_ParamSettings> {
                 child: MossTextField(
                   controller: TextEditingController(text: _seed.toString()),
                   hintText: '0 = 随机',
+                  color: widget.color,
                   onChanged: (v) {
                     final parsed = int.tryParse(v);
                     if (parsed != null) {
@@ -295,6 +311,9 @@ class _ParamSettingsState extends State<_ParamSettings> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _AppearanceSettings extends StatelessWidget {
+  final Color color;
+  const _AppearanceSettings({required this.color});
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -326,6 +345,7 @@ class _AppearanceSettings extends StatelessWidget {
                   if (v != null) SettingsService.setLanguage(v);
                 },
                 placeholder: '选择语言',
+                color: color,
                 items: const [
                   DropdownItem('中文', 'zh'),
                   DropdownItem('English', 'en'),

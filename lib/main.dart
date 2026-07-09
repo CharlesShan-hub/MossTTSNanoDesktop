@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import 'services/app_state.dart';
@@ -64,6 +66,7 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: kBg,
           body: MossBackground(
             theme: kTabColorSeries[_tab],
+            tabIndex: _tab,
             child: SafeArea(
               child: Column(
                 children: [
@@ -137,8 +140,7 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: kSurface,
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kS8, vertical: kS6),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -159,12 +161,16 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
               : 1.0;
           final scaleX = pulse;
           final scaleY = 2.0 - pulse; // 缩小时拉宽，胀大时收窄 — 流体守恒
+          // R 角同步脉冲：压缩时变圆 (20 → 35 → 20)，像水珠
+          final radius = 20.0 + 15 * (v < 0.5
+              ? (v < 0.25 ? v / 0.25 : (0.5 - v) / 0.25)
+              : 0);
 
           return SizedBox(
             height: 34,
             child: Stack(
               children: [
-                // ── 流体云朵指示器 ──
+                // ── 流体果冻云朵指示器（磨砂玻璃） ──
                 Positioned(
                   left: left,
                   top: 0,
@@ -174,12 +180,18 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
                     alignment: Alignment.center,
                     transform: Matrix4.identity()
                       ..scale(scaleX, scaleY),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: widget.colors[widget.tab].withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: widget.colors[widget.tab].withValues(alpha: 0.30),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(radius),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: widget.colors[widget.tab].withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(radius),
+                            border: Border.all(
+                              color: widget.colors[widget.tab].withValues(alpha: 0.35),
+                            ),
+                          ),
                         ),
                       ),
                     ),

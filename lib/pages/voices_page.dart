@@ -375,7 +375,7 @@ class _VoicesPageState extends State<VoicesPage> {
                       builder: (context, constraints) {
                         const gap = kS12;
                         const childW = 240.0;
-                        const childH = 150.0;
+                        const childH = 130.0;
                         final cols = ((constraints.maxWidth + gap) / (childW + gap)).floor().clamp(1, 10);
                         final cardW = (constraints.maxWidth - gap * (cols - 1)) / cols;
                         return Wrap(
@@ -401,7 +401,7 @@ class _VoicesPageState extends State<VoicesPage> {
 
   Widget _voiceCard(Voice v) {
     return MossGlassCard(
-      height: 150,
+      height: 130,
       padding: const EdgeInsets.all(kS12),
       color: Colors.white.withValues(alpha: 0.45),
       border: BorderSide(color: Colors.white.withValues(alpha: 0.50), width: 0.5),

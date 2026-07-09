@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -492,143 +491,102 @@ class MossGlassSidebar extends StatelessWidget {
 
 // ─── MossBackground ──────────────────────────────────────────────────────
 /// 页面背景（渐变 + 动画装饰光晕 + 漂浮装饰元素）
-class MossBackground extends StatelessWidget {
+class MossBackground extends StatefulWidget {
   final Widget child;
   final ColorSeries? theme;
+  final int tabIndex;
 
-  const MossBackground({super.key, required this.child, this.theme});
+  const MossBackground({
+    super.key,
+    required this.child,
+    this.theme,
+    this.tabIndex = 0,
+  });
+
+  @override
+  State<MossBackground> createState() => _MossBackgroundState();
+}
+
+class _MossBackgroundState extends State<MossBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spreadCtrl;
+  ColorSeries _prev = kBlue;
+
+  @override
+  void initState() {
+    super.initState();
+    _spreadCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..addListener(() => setState(() {}));
+    _prev = widget.theme ?? kBlue;
+  }
+
+  @override
+  void didUpdateWidget(MossBackground old) {
+    super.didUpdateWidget(old);
+    if (widget.theme != old.theme) {
+      _prev = old.theme ?? kBlue;
+      _spreadCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _spreadCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = theme ?? kBlue;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
+    final prevC = _prev;
+    final curC = widget.theme ?? kBlue;
+    final raw = _spreadCtrl.value;
+    // 小球扩散：0.6s 内完成 (前 60% 的动画)
+    final spreadV = (raw / 0.6).clamp(0.0, 1.0);
+    // 底色过渡：满 1.5s 慢慢变
+    final bgV = Curves.easeInOut.transform(raw);
+    final baseBg = Color.lerp(prevC.bg, kBg, bgV)!;
+    // 半圆涟漪：圆心在对应 Tab 的上边沿，从上往下扩散
+    final tabX = -0.75 + widget.tabIndex * 0.5;
+    final spreadRadius = 0.1 + Curves.easeOut.transform(spreadV) * 2.5;
+
+    return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             kBg,
-            c.bg.withValues(alpha: 0.6),
+            baseBg.withValues(alpha: 0.4),
             kBg,
           ],
         ),
       ),
       child: Stack(
         children: [
-          // ── 动画装饰光晕（漂浮在玻璃面板后面） ──
-          // 大圆：慢速漂移 + 柔和脉动
-          Positioned(
-            top: -80, right: -40,
-            child: _AnimatedDecorBlob(
-              size: 280,
-              color: c.light.withValues(alpha: 0.12),
-              driftX: 30, driftY: 20,
-              pulseRate: 0.6, driftRate: 0.3,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(tabX, -1.7),
+                    radius: spreadRadius,
+                    colors: [
+                      Colors.transparent,
+                      curC.main.withValues(alpha: 0.20),
+                      curC.main.withValues(alpha: 0.05),
+                      Colors.transparent,
+                    ],
+                    stops: const [0, 0.35, 0.65, 1],
+                  ),
+                ),
+              ),
             ),
           ),
-          Positioned(
-            bottom: 60, left: -60,
-            child: _AnimatedDecorBlob(
-              size: 220,
-              color: c.main.withValues(alpha: 0.10),
-              driftX: 25, driftY: 35,
-              pulseRate: 0.8, driftRate: 0.4,
-            ),
-          ),
-          // 小圆：较快节奏
-          Positioned(
-            top: 120, left: 80,
-            child: _AnimatedDecorBlob(
-              size: 120,
-              color: c.light.withValues(alpha: 0.08),
-              driftX: 15, driftY: 10,
-              pulseRate: 1.2, driftRate: 0.5,
-            ),
-          ),
-          Positioned(
-            bottom: -30, right: 100,
-            child: _AnimatedDecorBlob(
-              size: 160,
-              color: c.dark.withValues(alpha: 0.08),
-              driftX: 20, driftY: 15,
-              pulseRate: 0.9, driftRate: 0.35,
-            ),
-          ),
-          child,
+          // ── 动画装饰光晕 — 已移除 ──
+          widget.child,
         ],
-      ),
-    );
-  }
-}
-
-/// 动画装饰光晕圆点 — 脉动缩放 + 缓慢漂移
-class _AnimatedDecorBlob extends StatefulWidget {
-  final double size;
-  final Color color;
-  final double driftX;
-  final double driftY;
-  final double pulseRate;
-  final double driftRate;
-
-  const _AnimatedDecorBlob({
-    required this.size,
-    required this.color,
-    this.driftX = 0,
-    this.driftY = 0,
-    this.pulseRate = 1,
-    this.driftRate = 0.5,
-  });
-
-  @override
-  State<_AnimatedDecorBlob> createState() => _AnimatedDecorBlobState();
-}
-
-class _AnimatedDecorBlobState extends State<_AnimatedDecorBlob>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, child) {
-        final v = _ctrl.value;
-        // 脉动：sin 波在 0.75~1.25 之间平滑变化
-        final scale =
-            0.75 + 0.25 * ((math.sin(v * math.pi * 2 * widget.pulseRate) + 1) / 2);
-        // 漂移：不同频率和相位的 sin 组合，产生自然游走感
-        final dx = widget.driftX * math.sin(v * math.pi * 2 * widget.driftRate);
-        final dy = widget.driftY *
-            math.sin(v * math.pi * 2 * widget.driftRate * 0.7 + 1.3);
-        return Transform.translate(
-          offset: Offset(dx, dy),
-          child: Transform.scale(scale: scale, child: child),
-        );
-      },
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: widget.color,
-        ),
       ),
     );
   }
@@ -776,7 +734,32 @@ class MossGlassPanel extends StatelessWidget {
               borderRadius: borderRadius ?? BorderRadius.circular(kRadiusXl),
               border: Border.all(color: kGlassBorder),
             ),
-            child: child,
+            child: Stack(
+              children: [
+                child,
+                // ── 斜向高光反射层 ──
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: borderRadius ?? BorderRadius.circular(kRadiusXl),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.12),
+                            Colors.white.withValues(alpha: 0.04),
+                            Colors.transparent,
+                            Colors.transparent,
+                          ],
+                          stops: const [0, 0.15, 0.3, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1103,6 +1086,7 @@ class MossSettingsSlider extends StatelessWidget {
   final int divisions;
   final String Function(double) formatValue;
   final ValueChanged<double> onChanged;
+  final Color? color;
 
   const MossSettingsSlider({
     super.key,
@@ -1114,10 +1098,12 @@ class MossSettingsSlider extends StatelessWidget {
     this.divisions = 40,
     required this.formatValue,
     required this.onChanged,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final accent = color ?? kAccent;
     return MossSettingsRow(
       label: label,
       hint: hint,
@@ -1129,10 +1115,10 @@ class MossSettingsSlider extends StatelessWidget {
                 trackHeight: 3,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: kAccent,
+                activeTrackColor: accent,
                 inactiveTrackColor: kBorder,
-                thumbColor: kAccent,
-                overlayColor: kAccent.withValues(alpha: 0.1),
+                thumbColor: accent,
+                overlayColor: accent.withValues(alpha: 0.1),
               ),
               child: Slider(
                 value: value.clamp(min, max),
@@ -1157,12 +1143,13 @@ class MossSettingsSlider extends StatelessWidget {
   }
 }
 
-/// 设置页导航项
+/// 设置页导航项（圆圆的小药丸风格）
 class MossSettingsNavItem extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool active;
   final VoidCallback onTap;
+  final Color? color;
 
   const MossSettingsNavItem({
     super.key,
@@ -1170,35 +1157,42 @@ class MossSettingsNavItem extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),
-          decoration: BoxDecoration(
-            color: active ? kAccent.withValues(alpha: 0.1) : Colors.transparent,
-            border: Border(
-              left: BorderSide(
-                color: active ? kAccent : Colors.transparent,
-                width: 2,
+    final accent = color ?? kAccent;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kS8, vertical: kS4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),
+            decoration: BoxDecoration(
+              color: active ? accent.withValues(alpha: 0.12) : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: active ? accent.withValues(alpha: 0.30) : Colors.transparent,
+                width: 0.5,
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: active ? kAccent : kTextSecondary),
-              const SizedBox(width: kS10),
-              Text(label, style: TextStyle(
-                fontSize: kTextBase,
-                color: active ? kAccent : kTextPrimary,
-                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-              )),
-            ],
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: active ? accent : kTextSecondary),
+                const SizedBox(width: kS10),
+                Text(label, style: TextStyle(
+                  fontSize: kTextBase,
+                  color: active ? accent : kTextPrimary,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                )),
+              ],
+            ),
           ),
         ),
       ),
