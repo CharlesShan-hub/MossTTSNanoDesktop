@@ -11,7 +11,8 @@ import '../services/voice_service.dart';
 import 'theme.dart';
 
 class VoicesPage extends StatefulWidget {
-  const VoicesPage({super.key});
+  final ColorSeries theme;
+  const VoicesPage({super.key, required this.theme});
 
   @override
   State<VoicesPage> createState() => _VoicesPageState();
@@ -56,20 +57,17 @@ class _VoicesPageState extends State<VoicesPage> {
   }
 
   Future<Directory> get _appDir async {
-    // macOS: ~/Library/Application Support/com.example.mossTtsNano
-    // Windows: %APPDATA%/com.example.mossTtsNano
     final home = Platform.environment['HOME']
         ?? Platform.environment['USERPROFILE']
         ?? '/tmp';
-    final dir = Directory('$home/Library/Application Support/com.example.mossTtsNano');
-    if (!Platform.isMacOS) {
-      // Windows/Linux fallback
-      final appData = Platform.environment['APPDATA']
-          ?? '${home}/.local/share';
-      return Directory('$appData/com.example.mossTtsNano');
+    if (Platform.isMacOS) {
+      final dir = Directory('$home/Library/Application Support/com.example.mossTtsNano');
+      dir.createSync(recursive: true);
+      return dir;
     }
-    dir.createSync(recursive: true);
-    return dir;
+    final appData = Platform.environment['APPDATA']
+        ?? '${home}/.local/share';
+    return Directory('$appData/com.example.mossTtsNano');
   }
 
   Future<void> _saveHiddenIds() async {
@@ -109,43 +107,36 @@ class _VoicesPageState extends State<VoicesPage> {
     final filePath = result.files.single.path;
     if (filePath == null) return;
 
-    // 弹出名称输入框
     final nameCtrl = TextEditingController(text: result.files.single.name.split('.').first);
     final langCtrl = TextEditingController();
     final descCtrl = TextEditingController();
 
-    await showDialog(
+    await showMossDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('导入音色', style: TextStyle(fontSize: 14)),
-        content: SizedBox(
-          width: 300,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '音色名称 *', isDense: true)),
-              const SizedBox(height: 8),
-              TextField(controller: langCtrl, decoration: const InputDecoration(labelText: '语言', isDense: true)),
-              const SizedBox(height: 8),
-              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: '描述', isDense: true)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(onPressed: () async {
-            if (nameCtrl.text.trim().isEmpty) return;
-            Navigator.pop(ctx);
-            await VoiceService.addVoice(
-              name: nameCtrl.text.trim(),
-              language: langCtrl.text.trim(),
-              description: descCtrl.text.trim(),
-              sourceFilePath: filePath,
-            );
-            await _load(refresh: true);
-          }, child: const Text('导入')),
+      title: '导入音色',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MossTextField(controller: nameCtrl, hintText: '音色名称 *'),
+          const SizedBox(height: kS8),
+          MossTextField(controller: langCtrl, hintText: '语言'),
+          const SizedBox(height: kS8),
+          MossTextField(controller: descCtrl, hintText: '描述'),
         ],
       ),
+      cancelText: '取消',
+      confirmText: '导入',
+      onConfirm: () async {
+        if (nameCtrl.text.trim().isEmpty) return false;
+        await VoiceService.addVoice(
+          name: nameCtrl.text.trim(),
+          language: langCtrl.text.trim(),
+          description: descCtrl.text.trim(),
+          sourceFilePath: filePath,
+        );
+        await _load(refresh: true);
+        return true;
+      },
     );
   }
 
@@ -154,59 +145,47 @@ class _VoicesPageState extends State<VoicesPage> {
     final langCtrl = TextEditingController(text: voice.language);
     final descCtrl = TextEditingController(text: voice.description);
 
-    await showDialog(
+    await showMossDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('编辑音色', style: TextStyle(fontSize: 14)),
-        content: SizedBox(
-          width: 300,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '音色名称', isDense: true)),
-              const SizedBox(height: 8),
-              TextField(controller: langCtrl, decoration: const InputDecoration(labelText: '语言', isDense: true)),
-              const SizedBox(height: 8),
-              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: '描述', isDense: true)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(onPressed: () async {
-            Navigator.pop(ctx);
-            await VoiceService.updateVoice(
-              id: voice.id,
-              name: nameCtrl.text.trim(),
-              language: langCtrl.text.trim(),
-              description: descCtrl.text.trim(),
-            );
-            await _load(refresh: true);
-          }, child: const Text('保存')),
+      title: '编辑音色',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MossTextField(controller: nameCtrl, hintText: '音色名称'),
+          const SizedBox(height: kS8),
+          MossTextField(controller: langCtrl, hintText: '语言'),
+          const SizedBox(height: kS8),
+          MossTextField(controller: descCtrl, hintText: '描述'),
         ],
       ),
+      cancelText: '取消',
+      confirmText: '保存',
+      onConfirm: () async {
+        await VoiceService.updateVoice(
+          id: voice.id,
+          name: nameCtrl.text.trim(),
+          language: langCtrl.text.trim(),
+          description: descCtrl.text.trim(),
+        );
+        await _load(refresh: true);
+        return true;
+      },
     );
   }
 
   Future<void> _deleteVoice(Voice voice) async {
     if (voice.isUserVoice) {
-      // 用户音色：确认后彻底删除
-      final confirm = await showDialog<bool>(
+      final confirm = await showMossDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('删除音色', style: TextStyle(fontSize: 14)),
-          content: Text('确定要删除「${voice.name}」吗？\n音频文件也会被删除。', style: const TextStyle(fontSize: 13)),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除', style: TextStyle(color: Colors.red))),
-          ],
-        ),
+        title: '删除音色',
+        content: Text('确定要删除「${voice.name}」吗？\n音频文件也会被删除。', style: const TextStyle(fontSize: kTextMd)),
+        cancelText: '取消',
+        confirmText: '删除',
       );
       if (confirm != true) return;
       await VoiceService.deleteVoice(voice.id);
       await _load(refresh: true);
     } else {
-      // 内置音色：加入隐藏列表
       _toggleHidden(voice.id);
     }
   }
@@ -285,88 +264,86 @@ class _VoicesPageState extends State<VoicesPage> {
 
     return Row(
       children: [
-        Container(
-          width: 200, color: kSurface,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        MossGlassSidebar(children: [
+          MossSidebarSection(title: '操作', child: Column(
             children: [
-              sidebarGroup('操作', Column(
-                children: [
-                  SizedBox(width: double.infinity, child: btn('导入音色', _importVoice, color: kTabColors[2])),
-                  SizedBox(width: double.infinity, child: btn('刷新列表', () => _load(refresh: true), color: kTabColors[2])),
-                  const SizedBox(height: 4),
-                  if (_hiddenIds.isNotEmpty)
-                    SizedBox(width: double.infinity, child: btn('恢复默认音色', _restoreBuiltin, color: kTabColors[2])),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 28, height: 28,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => setState(() => _showHidden = !_showHidden),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Icon(
-                              _showHidden ? Icons.visibility : Icons.visibility_off,
-                              size: 18, color: _showHidden ? kAccent : kTextSecondary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text('隐藏的音色 (${_hiddenIds.length})',
-                        style: TextStyle(fontSize: 11, color: _hiddenIds.isEmpty ? kTextMuted : kTextSecondary)),
-                    ],
-                  ),
-                ],
+              SizedBox(width: double.infinity, child: MossButton(
+                text: '导入音色', icon: Icons.add,
+                onTap: _importVoice, color: widget.theme.main,
               )),
-              sidebarGroup('筛选', Column(
-                children: [
-                  const SizedBox(height: 4),
-                  TextField(
-                    onChanged: (v) => setState(() => _query = v),
-                    decoration: inputDec('搜索音色...'),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 6),
-                  langDropdown(
-                    value: _langFilter.isEmpty ? null : _langFilter,
-                    onChanged: (v) => setState(() => _langFilter = v ?? ''),
-                    items: [
-                      const MapEntry('全部语言', ''),
-                      for (final l in _langs)
-                        MapEntry(l, l),
-                    ],
-                  ),
-                ],
+              const SizedBox(height: kS6),
+              SizedBox(width: double.infinity, child: MossButton(
+                text: '刷新列表', icon: Icons.refresh,
+                type: MossButtonType.secondary,
+                onTap: () => _load(refresh: true),
               )),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Text(
-                  '导入的音频文件（WAV）将作为语音克隆的参考音色。\n建议 3-10 秒的清晰人声片段。',
-                  style: TextStyle(fontSize: 11, color: kTextMuted, height: 1.5),
-                ),
+              if (_hiddenIds.isNotEmpty) ...[
+                const SizedBox(height: kS6),
+                SizedBox(width: double.infinity, child: MossButton(
+                  text: '恢复默认音色', icon: Icons.restore,
+                  type: MossButtonType.secondary,
+                  onTap: _restoreBuiltin,
+                )),
+              ],
+              const SizedBox(height: kS8),
+              Row(
+                children: [
+                  MossIconButton(
+                    icon: _showHidden ? Icons.visibility : Icons.visibility_off,
+                    tooltip: '切换隐藏音色',
+                    onTap: () => setState(() => _showHidden = !_showHidden),
+                    color: _showHidden ? kAccent : null,
+                  ),
+                  const SizedBox(width: kS6),
+                  Text('隐藏的音色 (${_hiddenIds.length})',
+                    style: TextStyle(fontSize: kTextSm, color: _hiddenIds.isEmpty ? kTextMuted : kTextSecondary)),
+                ],
               ),
             ],
+          )),
+          MossSidebarSection(title: '筛选', child: Column(
+            children: [
+              MossTextField(
+                onChanged: (v) => setState(() => _query = v),
+                hintText: '搜索音色...',
+              ),
+              const SizedBox(height: kS6),
+              MossDropdown<String>(
+                value: _langFilter.isEmpty ? null : _langFilter,
+                onChanged: (v) => setState(() => _langFilter = v ?? ''),
+                placeholder: '全部语言',
+                items: [
+                  const DropdownItem('全部语言', ''),
+                  for (final l in _langs)
+                    DropdownItem(l, l),
+                ],
+              ),
+            ],
+          )),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(kS16, 0, kS16, kS16),
+            child: Text(
+              '导入的音频文件（WAV）将作为语音克隆的参考音色。\n建议 3-10 秒的清晰人声片段。',
+              style: TextStyle(fontSize: kTextSm, color: kTextMuted, height: 1.5),
+            ),
           ),
-        ),
+        ]),
         Expanded(child: Container(
-          color: kBg, padding: const EdgeInsets.all(16),
+          color: kBg, padding: const EdgeInsets.all(kS16),
           child: filtered.isEmpty
             ? Center(child: Text('没有匹配的音色', style: TextStyle(color: kTextMuted)))
             : ListView(
                 children: [
                   for (final entry in groups.entries) ...[
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: kS8),
                       child: Text('${entry.key} (${entry.value.length})',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kTextSecondary)),
+                        style: const TextStyle(fontSize: kTextBase, fontWeight: FontWeight.w600, color: kTextSecondary)),
                     ),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        const gap = 12.0;
+                        const gap = kS12;
                         const childW = 240.0;
                         const childH = 150.0;
                         final cols = ((constraints.maxWidth + gap) / (childW + gap)).floor().clamp(1, 10);
@@ -383,7 +360,7 @@ class _VoicesPageState extends State<VoicesPage> {
                         );
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: kS16),
                   ],
                 ],
               ),
@@ -393,58 +370,47 @@ class _VoicesPageState extends State<VoicesPage> {
   }
 
   Widget _voiceCard(Voice v) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: kBorder),
-      ),
+    return MossGlassCard(
+      height: 150,
+      padding: const EdgeInsets.all(kS12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: kAccent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(v.language, style: TextStyle(fontSize: 10, color: kAccent)),
-              ),
+              MossBadge(text: v.language),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(v.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: kS6),
+          Text(v.name, style: const TextStyle(fontSize: kTextMd, fontWeight: FontWeight.w500, color: kTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
           if (v.description.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(v.description, style: TextStyle(fontSize: 11, color: kTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+              padding: const EdgeInsets.only(top: kS2),
+              child: Text(v.description, style: TextStyle(fontSize: kTextSm, color: kTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           const Expanded(child: SizedBox.shrink()),
           Row(
             children: [
-              iconBtn(
-                _playingId == v.id ? Icons.stop : Icons.play_arrow,
-                '试听',
-                () => _playPreview(v),
+              MossIconButton(
+                icon: _playingId == v.id ? Icons.stop : Icons.play_arrow,
+                tooltip: '试听',
+                onTap: () => _playPreview(v),
                 color: _playingId == v.id ? Colors.blue : null,
               ),
-              const SizedBox(width: 8),
-              iconBtn(
-                _hiddenIds.contains(v.id) ? Icons.visibility_off : Icons.visibility_outlined,
-                _hiddenIds.contains(v.id) ? '显示' : '隐藏',
-                () => _toggleHidden(v.id),
+              const SizedBox(width: kS8),
+              MossIconButton(
+                icon: _hiddenIds.contains(v.id) ? Icons.visibility_off : Icons.visibility_outlined,
+                tooltip: _hiddenIds.contains(v.id) ? '显示' : '隐藏',
+                onTap: () => _toggleHidden(v.id),
                 color: _hiddenIds.contains(v.id) ? kTextMuted : null,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: kS8),
               if (v.isUserVoice) ...[
-                iconBtn(Icons.edit_outlined, '编辑', () => _editVoice(v)),
-                const SizedBox(width: 8),
+                MossIconButton(icon: Icons.edit_outlined, tooltip: '编辑', onTap: () => _editVoice(v)),
+                const SizedBox(width: kS8),
               ],
-              iconBtn(Icons.delete_outline, '删除', () => _deleteVoice(v), color: Colors.red.shade400),
+              MossIconButton(icon: Icons.delete_outline, tooltip: '删除', onTap: () => _deleteVoice(v), color: kError),
             ],
           ),
         ],

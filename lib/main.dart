@@ -21,7 +21,7 @@ class MossTTSApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: false,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        fontFamily: kFontFamily,
       ),
       home: const HomePage(),
     );
@@ -59,16 +59,19 @@ class _HomePageState extends State<HomePage> {
         listenable: _ctrl,
         builder: (context, _) => Scaffold(
           backgroundColor: kBg,
-          body: SafeArea(
-            child: Column(
-              children: [
-                _TitleBar(loading: _ctrl.loading || !_ctrl.loaded),
-                _TabBar(tab: _tab, onChanged: (i) => setState(() => _tab = i)),
-                Expanded(
-                  child: IndexedStack(index: _tab, children: _pages),
-                ),
-                _StatusBar(status: _ctrl.status),
-              ],
+          body: MossBackground(
+            theme: kTabColorSeries[_tab],
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _TitleBar(loading: _ctrl.loading || !_ctrl.loaded),
+                  _TabBar(tab: _tab, labels: _tabLabels, colors: kTabColors, onChanged: (i) => setState(() => _tab = i)),
+                  Expanded(
+                    child: IndexedStack(index: _tab, children: _pages),
+                  ),
+                  MossStatusBar(status: _ctrl.status),
+                ],
+              ),
             ),
           ),
         ),
@@ -79,10 +82,10 @@ class _HomePageState extends State<HomePage> {
 
 const _tabLabels = ['单次生成', '有声书', '音色管理', '设置'];
 
-final _pages = <Widget>[
-  const SinglePage(),
+List<Widget> get _pages => [
+  SinglePage(theme: kTabColorSeries[0]),
   const BookPage(),
-  const VoicesPage(),
+  VoicesPage(theme: kTabColorSeries[2]),
   const SettingsPage(),
 ];
 
@@ -94,24 +97,18 @@ class _TitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS8),
       color: kSurface,
       child: Row(
         children: [
-          Container(
-            width: 8, height: 8,
-            decoration: BoxDecoration(
-              color: loading ? const Color(0xFFFF9F0A) : const Color(0xFF30D158),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
+          MossStatusDot(active: !loading),
+          const SizedBox(width: kS8),
           const Text('CTTS', style: TextStyle(
-            fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary,
+            fontSize: kTextMd, fontWeight: FontWeight.w500, color: kTextPrimary,
           )),
           const Spacer(),
           Text(loading ? '加载模型中...' : '服务运行中',
-            style: const TextStyle(fontSize: 11, color: kTextSecondary)),
+            style: const TextStyle(fontSize: kTextSm, color: kTextSecondary)),
         ],
       ),
     );
@@ -121,37 +118,49 @@ class _TitleBar extends StatelessWidget {
 // ─── Tab 栏 ──────────────────────────────────────────────────────────────
 class _TabBar extends StatelessWidget {
   final int tab;
+  final List<String> labels;
+  final List<Color> colors;
   final ValueChanged<int> onChanged;
-  const _TabBar({required this.tab, required this.onChanged});
+  const _TabBar({
+    required this.tab, required this.labels,
+    required this.colors, required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: kSurface,
       child: Row(
-        children: List.generate(_tabLabels.length, (i) {
+        children: List.generate(labels.length, (i) {
           final active = i == tab;
           return Expanded(
             child: GestureDetector(
               onTap: () => onChanged(i),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: kS10),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: active ? kTabColors[i] : Colors.transparent,
+                      color: active ? colors[i] : Colors.transparent,
                       width: 2,
                     ),
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    _tabLabels[i],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                      color: active ? kTabColors[i] : kTextSecondary,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_tabIcons[i], size: 14, color: active ? colors[i] : kTextSecondary),
+                      const SizedBox(width: kS6),
+                      Text(
+                        labels[i],
+                        style: TextStyle(
+                          fontSize: kTextBase,
+                          fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                          color: active ? colors[i] : kTextSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -163,51 +172,9 @@ class _TabBar extends StatelessWidget {
   }
 }
 
-// ─── 状态栏 ──────────────────────────────────────────────────────────────
-class _StatusBar extends StatefulWidget {
-  final String status;
-  const _StatusBar({required this.status});
-
-  @override
-  State<_StatusBar> createState() => _StatusBarState();
-}
-class _StatusBarState extends State<_StatusBar> {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: const BoxDecoration(
-        color: kSurface,
-        border: Border(top: BorderSide(color: kBorder)),
-      ),
-      child: Row(
-        children: [
-          Text(widget.status, style: const TextStyle(fontSize: 11, color: kTextSecondary)),
-          const Spacer(),
-          const _ClockWidget(),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClockWidget extends StatefulWidget {
-  const _ClockWidget();
-  @override
-  State<_ClockWidget> createState() => _ClockWidgetState();
-}
-class _ClockWidgetState extends State<_ClockWidget> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) setState(() {});
-    });
-  }
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final s = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    return Text(s, style: const TextStyle(fontSize: 11, color: kTextSecondary));
-  }
-}
+const _tabIcons = [
+  Icons.record_voice_over,
+  Icons.menu_book,
+  Icons.voice_chat,
+  Icons.settings,
+];

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:onnxruntime_v2/onnxruntime_v2.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/tts_config.dart';
 
@@ -55,10 +57,13 @@ class OnnxEngine {
     required String bundleBasePath,
     String? tempDir,
   }) async {
+    debugPrint('[ONNX] ====== 开始加载模型 ======');
     _initEnv();
+    debugPrint('[ONNX] 环境初始化完成');
 
     // ── 1. 读取 browser_poc_manifest.json ──
     final manifestPath = '$bundleBasePath/MOSS-TTS-Nano-100M-ONNX/browser_poc_manifest.json';
+    debugPrint('[ONNX] 读取 manifest: $manifestPath');
     final manifest = jsonDecode(await rootBundle.loadString(manifestPath)) as Map<String, dynamic>;
 
     // ── 2. 读取 tts_browser_onnx_meta.json ──
@@ -79,10 +84,11 @@ class OnnxEngine {
     codecMetaRaw = rawCodecMeta;
 
     // ── 4. 复制模型文件到临时目录 ──
-    final tmp = tempDir ?? '${Directory.systemTemp.path}/moss_onnx_${DateTime.now().millisecondsSinceEpoch}';
+    final tmp = tempDir ?? p.join(Directory.current.path, '.moss_onnx_cache');
     _tempDir = tmp;
-    final ttsDir = '$tmp/MOSS-TTS-Nano-100M-ONNX';
-    final codecDir = '$tmp/MOSS-Audio-Tokenizer-Nano-ONNX';
+    final ttsDir = p.join(tmp, 'MOSS-TTS-Nano-100M-ONNX');
+    final codecDir = p.join(tmp, 'MOSS-Audio-Tokenizer-Nano-ONNX');
+    debugPrint('[ONNX] 临时目录: $tmp');
     Directory(ttsDir).createSync(recursive: true);
     Directory(codecDir).createSync(recursive: true);
 
@@ -94,6 +100,7 @@ class OnnxEngine {
       ttsConfig!.files.localCachedStep,
       ttsConfig!.files.localFixedSampledFrame,
     ];
+    debugPrint('[ONNX] TTS onnx 文件: $ttsModelFiles');
     // 外部 .data 文件
     final ttsDataFiles = <String>{};
     for (final paths in ttsConfig!.externalDataFiles.values) {
@@ -101,12 +108,15 @@ class OnnxEngine {
         ttsDataFiles.add(p);
       }
     }
+    debugPrint('[ONNX] TTS data 文件: $ttsDataFiles');
     for (final f in [...ttsModelFiles, ...ttsDataFiles]) {
+      debugPrint('[ONNX] 复制 $f ...');
       await _copyAssetToFile(
         '$bundleBasePath/MOSS-TTS-Nano-100M-ONNX/$f',
-        '$ttsDir/$f',
+        p.join(ttsDir, f),
       );
     }
+    debugPrint('[ONNX] TTS 文件复制完成');
 
     // Codec 模型文件
     final codecModelFiles = [
@@ -124,14 +134,18 @@ class OnnxEngine {
         }
       }
     }
+    debugPrint('[ONNX] Codec 文件: ${[...codecModelFiles, ...codecDataFiles]}');
     for (final f in [...codecModelFiles, ...codecDataFiles]) {
+      debugPrint('[ONNX] 复制 $f ...');
       await _copyAssetToFile(
         '$bundleBasePath/MOSS-Audio-Tokenizer-Nano-ONNX/$f',
-        '$codecDir/$f',
+        p.join(codecDir, f),
       );
     }
+    debugPrint('[ONNX] Codec 文件复制完成');
 
     // ── 5. 创建 Session（Python: ort.InferenceSession with SessionOptions） ──
+    debugPrint('[ONNX] 开始创建 Session ...');
     final sessionOptions = OrtSessionOptions();
     sessionOptions.setIntraOpNumThreads(4);
     sessionOptions.setInterOpNumThreads(1);
@@ -139,21 +153,30 @@ class OnnxEngine {
     sessionOptions.appendCPUProvider(CPUFlags.useArena);
 
     sessions = {
-      'prefill': await _createSession('$ttsDir/${ttsConfig!.files.prefill}', sessionOptions),
-      'decode': await _createSession('$ttsDir/${ttsConfig!.files.decodeStep}', sessionOptions),
-      'local_decoder': await _createSession('$ttsDir/${ttsConfig!.files.localDecoder}', sessionOptions),
-      'local_cached_step': await _createSession('$ttsDir/${ttsConfig!.files.localCachedStep}', sessionOptions),
+      'prefill': await _createSession(p.join(ttsDir, ttsConfig!.files.prefill), sessionOptions),
+      'decode': await _createSession(p.join(ttsDir, ttsConfig!.files.decodeStep), sessionOptions),
+      'local_decoder': await _createSession(p.join(ttsDir, ttsConfig!.files.localDecoder), sessionOptions),
+      'local_cached_step': await _createSession(p.join(ttsDir, ttsConfig!.files.localCachedStep), sessionOptions),
       'local_fixed_sampled_frame':
-          await _createSession('$ttsDir/${ttsConfig!.files.localFixedSampledFrame}', sessionOptions),
-      'codec_encode': await _createSession('$codecDir/${rawCodecMeta['files']['encode']}', sessionOptions),
-      'codec_decode': await _createSession('$codecDir/${rawCodecMeta['files']['decode_full']}', sessionOptions),
-      'codec_decode_step': await _createSession('$codecDir/${rawCodecMeta['files']['decode_step']}', sessionOptions),
+          await _createSession(p.join(ttsDir, ttsConfig!.files.localFixedSampledFrame), sessionOptions),
+      'codec_encode': await _createSession(p.join(codecDir, rawCodecMeta['files']['encode'] as String), sessionOptions),
+      'codec_decode': await _createSession(p.join(codecDir, rawCodecMeta['files']['decode_full'] as String), sessionOptions),
+      'codec_decode_step': await _createSession(p.join(codecDir, rawCodecMeta['files']['decode_step'] as String), sessionOptions),
     };
+    debugPrint('[ONNX] ====== 所有 Session 创建完成 ======');
   }
 
   /// 从文件创建 ONNX Session（必须用 fromFile，因为 .onnx 依赖外部 .data 文件）
   Future<OrtSession> _createSession(String modelPath, OrtSessionOptions options) async {
-    return OrtSession.fromFile(File(modelPath), options);
+    debugPrint('[ONNX] 创建 Session: $modelPath');
+    try {
+      final session = OrtSession.fromFile(File(modelPath), options);
+      debugPrint('[ONNX] Session 创建成功: $modelPath');
+      return session;
+    } catch (e) {
+      debugPrint('[ONNX] Session 创建失败: $modelPath → $e');
+      rethrow;
+    }
   }
 
   /// 将 Flutter asset 复制到文件系统路径

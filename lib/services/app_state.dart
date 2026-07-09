@@ -59,7 +59,8 @@ class TtsController extends ChangeNotifier {
 
       _loaded = true;
       status = '就绪 · 模型加载完成';
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[TtsController] 加载失败: $e\n$st');
       status = '模型加载失败: $e';
     } finally {
       _loading = false;
