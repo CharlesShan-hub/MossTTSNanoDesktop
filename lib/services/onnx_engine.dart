@@ -84,8 +84,12 @@ class OnnxEngine {
     codecMetaRaw = rawCodecMeta;
 
     // ── 4. 复制模型文件到临时目录 ──
-    final tmp = tempDir ?? p.join(Directory.current.path, '.moss_onnx_cache');
+    final tmp = tempDir ?? p.join(Directory.systemTemp.path, 'moss_onnx_cache');
     _tempDir = tmp;
+    // 清空旧缓存，避免文件锁冲突和磁盘膨胀
+    if (Directory(tmp).existsSync()) {
+      try { Directory(tmp).deleteSync(recursive: true); } catch (_) {}
+    }
     final ttsDir = p.join(tmp, 'MOSS-TTS-Nano-100M-ONNX');
     final codecDir = p.join(tmp, 'MOSS-Audio-Tokenizer-Nano-ONNX');
     debugPrint('[ONNX] 临时目录: $tmp');

@@ -2,7 +2,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 持久化应用设置
 class SettingsService {
-  static const _kModelPath = 'model_path';
   static const _kTemperature = 'temperature';
   static const _kTopK = 'top_k';
   static const _kTopP = 'top_p';
@@ -12,18 +11,14 @@ class SettingsService {
   static const _kThemeMode = 'theme_mode';
   static const _kLanguage = 'language';
   static const _kDefaultVoiceId = 'default_voice_id';
+  static const _kApiEnabled = 'api_enabled';
+  static const _kApiPort = 'api_port';
 
   static late SharedPreferences _prefs;
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
-
-  // ─── 模型 ───
-
-  static String get modelPath => _prefs.getString(_kModelPath) ?? '';
-
-  static Future<void> setModelPath(String v) => _prefs.setString(_kModelPath, v);
 
   // ─── 生成参数 ───
 
@@ -69,4 +64,14 @@ class SettingsService {
   static String get defaultVoiceId => _prefs.getString(_kDefaultVoiceId) ?? '';
 
   static Future<void> setDefaultVoiceId(String v) => _prefs.setString(_kDefaultVoiceId, v);
+
+  // ─── API 服务 ───
+
+  static bool get apiEnabled => _prefs.getBool(_kApiEnabled) ?? false;
+
+  static Future<void> setApiEnabled(bool v) => _prefs.setBool(_kApiEnabled, v);
+
+  static int get apiPort => _prefs.getInt(_kApiPort) ?? 8080;
+
+  static Future<void> setApiPort(int v) => _prefs.setInt(_kApiPort, v.clamp(1024, 65535));
 }

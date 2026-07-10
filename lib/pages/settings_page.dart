@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 
+import '../services/app_state.dart';
 import '../services/settings_service.dart';
 import 'theme.dart';
 
@@ -16,8 +17,9 @@ class _SettingsPageState extends State<SettingsPage> {
   int _navIndex = 0;
 
   final _navItems = const [
-    ('模型', Icons.memory),
+    ('模型信息', Icons.memory),
     ('生成参数', Icons.tune),
+    ('API 服务', Icons.cloud),
     ('外观', Icons.palette_outlined),
     ('快捷键', Icons.keyboard),
   ];
@@ -62,43 +64,21 @@ class _SettingsPageState extends State<SettingsPage> {
     switch (_navIndex) {
       case 0: return _ModelSettings(color: accent);
       case 1: return _ParamSettings(color: accent);
-      case 2: return _AppearanceSettings(color: accent);
-      case 3: return _ShortcutsSettings();
+      case 2: return _ApiServiceSettings(color: accent);
+      case 3: return _AppearanceSettings(color: accent);
+      case 4: return _ShortcutsSettings();
       default: return const SizedBox.shrink();
     }
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  模型设置
+//  模型信息
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _ModelSettings extends StatefulWidget {
+class _ModelSettings extends StatelessWidget {
   final Color color;
   const _ModelSettings({required this.color});
-
-  @override
-  State<_ModelSettings> createState() => _ModelSettingsState();
-}
-
-class _ModelSettingsState extends State<_ModelSettings> {
-  final _pathCtrl = TextEditingController(text: SettingsService.modelPath);
-
-  @override
-  void dispose() {
-    _pathCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickPath() async {
-    final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '选择模型目录',
-    );
-    if (result != null) {
-      _pathCtrl.text = result;
-      await SettingsService.setModelPath(result);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,57 +86,83 @@ class _ModelSettingsState extends State<_ModelSettings> {
       child: Column(
         children: [
           MossSettingsGroup(
-            title: '模型路径',
-            description: '选择 ONNX 模型所在的目录，支持多模型切换',
+            title: '当前模型',
+            description: 'MOSS-TTS-Nano 是一个轻量级的语音合成模型',
             child: Column(
               children: [
-                MossSettingsRow(
-                  label: '路径',
-                  control: Row(
-                    children: [
-                      Expanded(
-                        child: MossTextField(
-                          controller: _pathCtrl,
-                          hintText: '未设置，使用内置模型',
-                          onChanged: (v) => SettingsService.setModelPath(v),
-                          color: widget.color,
-                        ),
-                      ),
-                      const SizedBox(width: kS8),
-                      MossButton(
-                        text: '浏览',
-                        icon: Icons.folder_open,
-                        type: MossButtonType.secondary,
-                        color: widget.color,
-                        onTap: _pickPath,
-                      ),
-                    ],
-                  ),
-                ),
+                _infoRow('模型名称', 'MOSS-TTS-Nano-100M'),
+                const SizedBox(height: kS8),
+                _infoRow('架构类型', 'Attention-based AR Decoder + AudioCodec'),
+                const SizedBox(height: kS8),
+                _infoRow('参数量', '约 100M'),
+                const SizedBox(height: kS8),
+                _infoRow('支持语言', '中文 / English'),
+                const SizedBox(height: kS8),
+                _infoRow('采样率', '48000 Hz'),
               ],
             ),
           ),
           const SizedBox(height: kS16),
           MossSettingsGroup(
-            title: '可用模型',
-            description: '当前仅内置 MOSS-TTS-Nano-100M 模型',
-            child: Container(
-              padding: const EdgeInsets.all(kS12),
-              decoration: BoxDecoration(
-                color: kBg,
-                borderRadius: BorderRadius.circular(kRadiusMd),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle, size: 14, color: kSuccess),
-                  const SizedBox(width: kS8),
-                  const Text('MOSS-TTS-Nano-100M',
-                    style: TextStyle(fontSize: kTextBase, color: kTextPrimary)),
-                  const Spacer(),
-                  MossBadge(text: '使用中', color: kSuccess),
-                ],
-              ),
+            title: '开源地址',
+            description: '欢迎 Star & Fork',
+            child: _GitHubLink(color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label, style: TextStyle(fontSize: kTextBase, color: kTextSecondary)),
+        ),
+        Text(value, style: TextStyle(fontSize: kTextBase, color: kTextPrimary)),
+      ],
+    );
+  }
+}
+
+class _GitHubLink extends StatelessWidget {
+  final Color color;
+  const _GitHubLink({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    const url = 'https://github.com/OpenMOSS/MOSS-TTS-Nano';
+    return Container(
+      padding: const EdgeInsets.all(kS12),
+      decoration: BoxDecoration(
+        color: kBg,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.link, size: 14, color: color),
+          const SizedBox(width: kS8),
+          Expanded(
+            child: Text(url,
+              style: TextStyle(fontSize: kTextBase, color: color),
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          const SizedBox(width: kS8),
+          MossButton(
+            text: '复制',
+            icon: Icons.content_copy,
+            type: MossButtonType.ghost,
+            color: color,
+            height: 28,
+            onTap: () {
+              Clipboard.setData(const ClipboardData(text: url));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('已复制链接'), duration: Duration(seconds: 1)),
+              );
+            },
           ),
         ],
       ),
@@ -300,6 +306,185 @@ class _ParamSettingsState extends State<_ParamSettings> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  API 服务
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ApiServiceSettings extends StatefulWidget {
+  final Color color;
+  const _ApiServiceSettings({required this.color});
+
+  @override
+  State<_ApiServiceSettings> createState() => _ApiServiceSettingsState();
+}
+
+class _ApiServiceSettingsState extends State<_ApiServiceSettings> {
+  late bool _enabled;
+  late int _port;
+  late final TextEditingController _portCtrl;
+  bool _listening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = SettingsService.apiEnabled;
+    _port = SettingsService.apiPort;
+    _portCtrl = TextEditingController(text: _port.toString());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_listening) {
+      AppState.of(context).addListener(_onCtrlChanged);
+      _listening = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_listening) {
+      try { AppState.of(context).removeListener(_onCtrlChanged); } catch (_) {}
+    }
+    _portCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onCtrlChanged() => setState(() {});
+
+  Future<void> _toggle(bool on) async {
+    final ctrl = AppState.of(context);
+    if (on) {
+      await ctrl.startApiServer(port: _port);
+    } else {
+      await ctrl.stopApiServer();
+    }
+    await SettingsService.setApiEnabled(on);
+    if (mounted) setState(() => _enabled = on);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = AppState.of(context);
+    final running = ctrl.apiRunning;
+    final server = ctrl.apiServer;
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          MossSettingsGroup(
+            title: 'HTTP API 服务',
+            description: '启动后可通过 HTTP 请求调用 TTS 合成',
+            child: Column(
+              children: [
+                MossSettingsRow(
+                  label: '启用服务',
+                  control: SizedBox(
+                    width: 44, height: 24,
+                    child: Switch(
+                      value: _enabled,
+                      onChanged: _toggle,
+                      activeColor: widget.color,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: kS12),
+                MossSettingsRow(
+                  label: '端口号',
+                  control: SizedBox(
+                    width: 120,
+                    child: MossTextField(
+                      controller: _portCtrl,
+                      hintText: '8080',
+                      onChanged: (v) {
+                        final parsed = int.tryParse(v);
+                        if (parsed != null && parsed >= 1024 && parsed <= 65535) {
+                          _port = parsed;
+                          SettingsService.setApiPort(parsed);
+                        }
+                      },
+                      color: widget.color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: kS16),
+          MossSettingsGroup(
+            title: '状态',
+            description: running ? '服务运行中' : '服务已停止',
+            child: Column(
+              children: [
+                MossSettingsRow(
+                  label: '状态',
+                  control: Row(
+                    children: [
+                      MossStatusDot(active: running),
+                      const SizedBox(width: kS6),
+                      Text(running ? '运行中' : '已停止',
+                        style: TextStyle(fontSize: kTextBase, color: running ? kSuccess : kTextSecondary)),
+                    ],
+                  ),
+                ),
+                if (running) ...[
+                  const SizedBox(height: kS8),
+                  MossSettingsRow(
+                    label: '地址',
+                    control: Text('http://localhost:${server?.port ?? _port}',
+                      style: TextStyle(fontSize: kTextBase, color: widget.color)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: kS16),
+          MossSettingsGroup(
+            title: '接口文档',
+            description: '所有接口返回 JSON 或 WAV 音频',
+            child: Column(
+              children: [
+                _endpointRow('POST', '/v1/tts', '合成语音 → WAV'),
+                const SizedBox(height: kS6),
+                _endpointRow('GET', '/v1/voices', '音色列表 → JSON'),
+                const SizedBox(height: kS6),
+                _endpointRow('GET', '/v1/health', '健康检查 → JSON'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _endpointRow(String method, String path, String desc) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: kS10, vertical: kS6),
+      decoration: BoxDecoration(
+        color: kBg,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: kS6, vertical: 2),
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(kRadiusSm),
+            ),
+            child: Text(method, style: TextStyle(
+              fontSize: kTextXs, fontWeight: FontWeight.w600, color: widget.color)),
+          ),
+          const SizedBox(width: kS8),
+          Text(path, style: TextStyle(fontSize: kTextBase, color: kTextPrimary, fontFamily: 'monospace')),
+          const Spacer(),
+          Text(desc, style: TextStyle(fontSize: kTextSm, color: kTextSecondary)),
         ],
       ),
     );

@@ -9,7 +9,9 @@ import 'package:onnxruntime_v2/onnxruntime_v2.dart';
 import 'onnx_engine.dart';
 import 'tokenizer.dart';
 import 'tts_inferencer.dart';
+import 'tts_server.dart';
 import 'voice_service.dart';
+import 'settings_service.dart';
 
 /// 全局 TTS 控制器，管理模型加载和合成
 class TtsController extends ChangeNotifier {
@@ -20,6 +22,7 @@ class TtsController extends ChangeNotifier {
   bool _loading = false;
   String _status = '就绪';
   bool _loaded = false;
+  TtsServer? _apiServer;
 
   OnnxEngine? get engine => _engine;
   MossTokenizer? get tokenizer => _tokenizer;
@@ -28,6 +31,8 @@ class TtsController extends ChangeNotifier {
   bool get loaded => _loaded;
   bool get loading => _loading;
   String get status => _status;
+  TtsServer? get apiServer => _apiServer;
+  bool get apiRunning => _apiServer?.isRunning ?? false;
 
   set status(String s) {
     _status = s;
@@ -59,6 +64,10 @@ class TtsController extends ChangeNotifier {
 
       _loaded = true;
       status = '就绪 · 模型加载完成';
+      // 自动启动 API 服务
+      if (SettingsService.apiEnabled) {
+        await startApiServer();
+      }
     } catch (e, st) {
       debugPrint('[TtsController] 加载失败: $e\n$st');
       status = '模型加载失败: $e';
@@ -66,6 +75,30 @@ class TtsController extends ChangeNotifier {
       _loading = false;
       notifyListeners();
     }
+  }
+
+  /// 启动 API 服务器
+  Future<void> startApiServer({int? port}) async {
+    if (_apiServer != null) return;
+    _apiServer = TtsServer(this);
+    try {
+      await _apiServer!.start(port: port);
+      status = 'API 服务运行中 :${_apiServer!.port}';
+      notifyListeners();
+    } catch (e) {
+      status = 'API 服务启动失败: $e';
+      _apiServer = null;
+      notifyListeners();
+    }
+  }
+
+  /// 停止 API 服务器
+  Future<void> stopApiServer() async {
+    if (_apiServer == null) return;
+    await _apiServer!.stop();
+    _apiServer = null;
+    status = 'API 服务已停止';
+    notifyListeners();
   }
 
   int _int(dynamic v) {
@@ -403,6 +436,7 @@ class TtsController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _apiServer?.stop();
     _engine?.dispose();
     super.dispose();
   }
