@@ -9,7 +9,7 @@ import '../models/voice.dart';
 import '../services/voice_service.dart';
 import '../services/app_state.dart';
 import '../services/settings_service.dart';
-import 'theme.dart';
+import 'theme/components.dart';
 
 class SinglePage extends StatefulWidget {
   final ColorSeries theme;

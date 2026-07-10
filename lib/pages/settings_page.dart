@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/app_state.dart';
 import '../services/settings_service.dart';
-import 'theme.dart';
+import 'theme/components.dart';
 
 class SettingsPage extends StatefulWidget {
   final ColorSeries theme;

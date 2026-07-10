@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/settings_service.dart';
-import 'theme.dart';
+import 'theme/components.dart';
 
 class BookPage extends StatelessWidget {
   final ColorSeries theme;

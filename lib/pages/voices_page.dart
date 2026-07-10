@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../models/voice.dart';
 import '../services/voice_service.dart';
-import 'theme.dart';
+import 'theme/components.dart';
 
 class VoicesPage extends StatefulWidget {
   final ColorSeries theme;
@@ -363,7 +363,7 @@ class _VoicesPageState extends State<VoicesPage> {
           child: filtered.isEmpty
             ? Center(child: Text('没有匹配的音色', style: TextStyle(color: kTextMuted)))
             : ListView(
-                physics: const BouncyPhysics(),
+                physics: const BouncingScrollPhysics(),
                 children: [
                   for (final entry in groups.entries) ...[
                     Padding(
@@ -404,7 +404,6 @@ class _VoicesPageState extends State<VoicesPage> {
       height: 130,
       padding: const EdgeInsets.all(kS12),
       color: Colors.white.withValues(alpha: 0.45),
-      border: BorderSide(color: Colors.white.withValues(alpha: 0.50), width: 0.5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

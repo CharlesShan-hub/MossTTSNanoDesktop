@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'services/app_state.dart';
 import 'services/settings_service.dart';
-import 'pages/theme.dart';
+import 'pages/theme/components.dart';
 import 'pages/single_page.dart';
 import 'pages/book_page.dart';
 import 'pages/voices_page.dart';
