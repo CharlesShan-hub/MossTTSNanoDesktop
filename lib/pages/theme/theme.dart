@@ -29,7 +29,7 @@ const kGlassWhite  = Color(0x5CFFFFFF);
 const kGlassBg     = Color(0x2EF5F5F7);
 const kGlassBorder = Color(0x14D2D2D7);
 const kGlassShadow = Color(0x08000000);
-const kBlurGlass   = 10.0;
+const kBlurGlass   = 6.0;
 
 // 暗色模式
 const kDarkBg        = Color(0xFF1C1C1E);

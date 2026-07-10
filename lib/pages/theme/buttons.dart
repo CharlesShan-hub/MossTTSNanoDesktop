@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'moss_theme.dart';
 
 // ─── MossButton ───────────────────────────────────────────────────────────
 enum MossButtonType { primary, secondary, ghost }
@@ -26,12 +27,13 @@ class MossButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     final disabled = onTap == null || loading;
     Color bgColor;
     Color textColor;
     Color borderColor;
 
-    final accent = color ?? kAccent;
+    final accent = color ?? theme.accent;
 
     switch (type) {
       case MossButtonType.primary:
@@ -39,12 +41,12 @@ class MossButton extends StatelessWidget {
         textColor = Colors.white;
         borderColor = Colors.transparent;
       case MossButtonType.secondary:
-        bgColor = disabled ? kSurface.withValues(alpha: 0.5) : kSurface;
-        textColor = disabled ? kTextMuted : kTextPrimary;
-        borderColor = kBorder;
+        bgColor = disabled ? theme.surface.withValues(alpha: 0.5) : theme.surface;
+        textColor = disabled ? theme.textMuted : theme.textPrimary;
+        borderColor = theme.border;
       case MossButtonType.ghost:
         bgColor = Colors.transparent;
-        textColor = disabled ? kTextMuted : accent;
+        textColor = disabled ? theme.textMuted : accent;
         borderColor = Colors.transparent;
     }
 
@@ -56,6 +58,8 @@ class MossButton extends StatelessWidget {
         child: InkWell(
           onTap: disabled ? null : onTap,
           borderRadius: BorderRadius.circular(kRadiusMd),
+          splashColor: textColor.withValues(alpha: 0.15),
+          highlightColor: textColor.withValues(alpha: 0.08),
           child: Container(
             decoration: type == MossButtonType.secondary
                 ? BoxDecoration(
@@ -111,15 +115,18 @@ class MossIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     final isActive = onTap != null;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(kRadiusSm),
+        splashColor: (color ?? theme.textSecondary).withValues(alpha: 0.15),
+        highlightColor: (color ?? theme.textSecondary).withValues(alpha: 0.08),
         child: Padding(
           padding: const EdgeInsets.all(kS4),
-          child: Icon(icon, size: size, color: isActive ? (color ?? kTextSecondary) : kTextMuted),
+          child: Icon(icon, size: size, color: isActive ? (color ?? theme.textSecondary) : theme.textMuted),
         ),
       ),
     );

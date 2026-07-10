@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'moss_theme.dart';
 
 // ─── MossCard ─────────────────────────────────────────────────────────────
 class MossCard extends StatelessWidget {
@@ -22,14 +23,15 @@ class MossCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = MossTheme.of(context);
     return Container(
       width: width,
       height: height,
       padding: padding ?? const EdgeInsets.all(kS12),
       decoration: BoxDecoration(
-        color: color ?? kSurface,
+        color: this.color ?? c.surface,
         borderRadius: BorderRadius.circular(kRadiusLg),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: c.border),
       ),
       child: child,
     );
@@ -57,6 +59,7 @@ class MossGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = MossTheme.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(kRadiusLg),
       child: BackdropFilter(
@@ -66,9 +69,9 @@ class MossGlassCard extends StatelessWidget {
           height: height,
           padding: padding ?? const EdgeInsets.all(kS12),
           decoration: BoxDecoration(
-            color: kGlassWhite,
+            color: this.color ?? c.glassBg,
             borderRadius: BorderRadius.circular(kRadiusLg),
-            border: Border.all(color: kGlassBorder),
+            border: Border.all(color: c.glassBorder),
           ),
           child: child,
         ),
@@ -77,7 +80,7 @@ class MossGlassCard extends StatelessWidget {
   }
 }
 
-// ─── MossGlassPanel (全宽面板, 用于设置页内容区) ──────────────────────────
+// ─── MossGlassPanel ──────────────────────────────────────────────────────
 class MossGlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? margin;
@@ -92,19 +95,25 @@ class MossGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = MossTheme.of(context);
     return Container(
       margin: margin,
-      padding: padding ?? const EdgeInsets.all(kS20),
       decoration: BoxDecoration(
-        color: kGlassWhite,
         borderRadius: BorderRadius.circular(kRadiusXl),
-        border: Border.all(color: kGlassBorder),
+        border: Border.all(color: c.glassBorder),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(kRadiusXl - 2),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
-          child: child,
+          child: Container(
+            padding: padding ?? const EdgeInsets.all(kS20),
+            decoration: BoxDecoration(
+              color: c.glassBg,
+              borderRadius: BorderRadius.circular(kRadiusXl - 2),
+            ),
+            child: child,
+          ),
         ),
       ),
     );
@@ -120,6 +129,7 @@ class MossGlassSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = MossTheme.of(context);
     return Container(
       width: 200,
       margin: margin,
@@ -129,8 +139,8 @@ class MossGlassSidebar extends StatelessWidget {
           filter: ui.ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
           child: Container(
             decoration: BoxDecoration(
-              color: kGlassWhite,
-              border: Border(right: BorderSide(color: kGlassBorder)),
+              color: c.glassBg,
+              border: Border(right: BorderSide(color: c.glassBorder)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,29 +154,104 @@ class MossGlassSidebar extends StatelessWidget {
 }
 
 // ─── MossBackground ──────────────────────────────────────────────────────
-class MossBackground extends StatelessWidget {
+/// 页面背景（渐变 + tab 切换涟漪扩散效果）
+class MossBackground extends StatefulWidget {
   final Widget child;
   final ColorSeries? theme;
-  final int? tabIndex;
+  final int tabIndex;
 
-  const MossBackground({super.key, required this.child, this.theme, this.tabIndex});
+  const MossBackground({
+    super.key,
+    required this.child,
+    this.theme,
+    this.tabIndex = 0,
+  });
+
+  @override
+  State<MossBackground> createState() => _MossBackgroundState();
+}
+
+class _MossBackgroundState extends State<MossBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spreadCtrl;
+  ColorSeries _prev = kBlue;
+
+  @override
+  void initState() {
+    super.initState();
+    _spreadCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..addListener(() => setState(() {}));
+    _prev = widget.theme ?? kBlue;
+  }
+
+  @override
+  void didUpdateWidget(MossBackground old) {
+    super.didUpdateWidget(old);
+    if (widget.theme != old.theme) {
+      _prev = old.theme ?? kBlue;
+      _spreadCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _spreadCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = theme ?? kBlue;
+    final c = MossTheme.of(context);
+    final prevC = _prev;
+    final curC = widget.theme ?? kBlue;
+    final raw = _spreadCtrl.value;
+    // 小球扩散：0.6s 内完成 (前 60% 的动画)
+    final spreadV = (raw / 0.6).clamp(0.0, 1.0);
+    // 底色过渡：满 1.5s 慢慢变
+    final bgV = Curves.easeInOut.transform(raw);
+    final baseBg = Color.lerp(prevC.bg, c.bg, bgV)!;
+    // 半圆涟漪：圆心在对应 Tab 的上边沿，从上往下扩散
+    final tabX = -0.75 + widget.tabIndex * 0.5;
+    final spreadRadius = 0.1 + Curves.easeOut.transform(spreadV) * 2.5;
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            kBg,
-            c.bg.withValues(alpha: 0.3),
-            kBg,
+            c.bg,
+            baseBg.withValues(alpha: 0.4),
+            c.bg,
           ],
         ),
       ),
-      child: child,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(tabX, -1.7),
+                    radius: spreadRadius,
+                    colors: [
+                      Colors.transparent,
+                      curC.main.withValues(alpha: 0.20),
+                      curC.main.withValues(alpha: 0.05),
+                      Colors.transparent,
+                    ],
+                    stops: const [0, 0.35, 0.65, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          widget.child,
+        ],
+      ),
     );
   }
 }

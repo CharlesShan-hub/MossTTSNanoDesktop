@@ -4,6 +4,7 @@ import '../theme/components.dart';
 class ShortcutsSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     final shortcuts = [
       ('⌘ + Enter', '生成语音'),
       ('⌘ + S', '保存音频'),
@@ -26,14 +27,14 @@ class ShortcutsSettings extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: kS8, vertical: kS4),
                       decoration: BoxDecoration(
-                        color: kBg,
+                        color: theme.bg,
                         borderRadius: BorderRadius.circular(kRadiusSm),
-                        border: Border.all(color: kBorder),
+                        border: Border.all(color: theme.border),
                       ),
-                      child: Text(s.$1, style: const TextStyle(fontSize: kTextSm, color: kTextPrimary, fontFamily: kFontFamily)),
+                      child: Text(s.$1, style: TextStyle(fontSize: kTextSm, color: theme.textPrimary, fontFamily: kFontFamily)),
                     ),
                     const SizedBox(width: kS12),
-                    Text(s.$2, style: const TextStyle(fontSize: kTextBase, color: kTextSecondary)),
+                    Text(s.$2, style: TextStyle(fontSize: kTextBase, color: theme.textSecondary)),
                   ],
                 ),
               )).toList(),

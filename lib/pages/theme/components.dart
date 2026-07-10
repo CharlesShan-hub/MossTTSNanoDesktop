@@ -9,4 +9,5 @@ export 'cards.dart';      // MossCard, MossGlassCard, MossGlassSidebar, MossBack
 export 'inputs.dart';     // MossTextField, MossDropdown, MossSettingsSlider, MossSettingsRow, MossSettingsGroup, MossSettingsNavItem
 export 'layout.dart';     // MossSidebar, MossSidebarSection, MossStatusDot, MossStatusBar, MossBadge
 export 'dialog.dart';     // showMossDialog
+export 'moss_theme.dart'; // MossTheme / MossThemeData
 export 'compat.dart';     // 旧函数: inputDec, langDropdown, sidebarGroup, btn, iconBtn

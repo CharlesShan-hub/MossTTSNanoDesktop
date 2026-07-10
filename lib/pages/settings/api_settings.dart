@@ -109,16 +109,16 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
             child: Column(
               children: [
                 MossSettingsRow(
-                  label: '状态',
-                  control: Row(
-                    children: [
-                      MossStatusDot(active: running),
-                      const SizedBox(width: kS6),
-                      Text(running ? '运行中' : '已停止',
-                        style: TextStyle(fontSize: kTextBase, color: running ? kSuccess : kTextSecondary)),
-                    ],
+                    label: '状态',
+                    control: Row(
+                      children: [
+                        MossStatusDot(active: running),
+                        const SizedBox(width: kS6),
+                        Text(running ? '运行中' : '已停止',
+                          style: TextStyle(fontSize: kTextBase, color: running ? kSuccess : Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey)),
+                      ],
+                    ),
                   ),
-                ),
                 if (running) ...[
                   const SizedBox(height: kS8),
                   MossSettingsRow(
@@ -150,10 +150,11 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
   }
 
   Widget _endpointRow(String method, String path, String desc) {
+    final theme = MossTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: kS10, vertical: kS6),
       decoration: BoxDecoration(
-        color: kBg,
+        color: theme.bg,
         borderRadius: BorderRadius.circular(kRadiusMd),
       ),
       child: Row(
@@ -168,9 +169,9 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
               fontSize: kTextXs, fontWeight: FontWeight.w600, color: widget.color)),
           ),
           const SizedBox(width: kS8),
-          Text(path, style: TextStyle(fontSize: kTextBase, color: kTextPrimary, fontFamily: 'monospace')),
+          Text(path, style: TextStyle(fontSize: kTextBase, color: theme.textPrimary, fontFamily: 'monospace')),
           const Spacer(),
-          Text(desc, style: TextStyle(fontSize: kTextSm, color: kTextSecondary)),
+          Text(desc, style: TextStyle(fontSize: kTextSm, color: theme.textSecondary)),
         ],
       ),
     );

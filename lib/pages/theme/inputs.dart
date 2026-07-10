@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import 'buttons.dart';
+import 'moss_theme.dart';
 import 'cards.dart';
 
 // ─── MossDropdown ─────────────────────────────────────────────────────────
@@ -22,21 +22,22 @@ class MossDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     final label = items.where((e) => e.value == value).firstOrNull?.label ?? placeholder;
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color: kBg,
+        color: theme.bg,
         borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: theme.border),
       ),
       child: PopupMenuButton<T>(
         onSelected: onChanged,
         offset: const Offset(0, 40),
-        color: kSurface,
+        color: theme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusLg),
-          side: const BorderSide(color: kBorder),
+          side: BorderSide(color: theme.border),
         ),
         itemBuilder: (_) => [
           for (final item in items)
@@ -46,7 +47,7 @@ class MossDropdown<T> extends StatelessWidget {
               child: Row(
                 children: [
                   if (item.value == value)
-                    Icon(Icons.check, size: 14, color: color ?? kAccent)
+                    Icon(Icons.check, size: 14, color: color ?? theme.accent)
                   else
                     const SizedBox(width: 14),
                   const SizedBox(width: kS8),
@@ -54,7 +55,7 @@ class MossDropdown<T> extends StatelessWidget {
                     item.label,
                     style: TextStyle(
                       fontSize: kTextBase,
-                      color: item.value == value ? (color ?? kAccent) : kTextPrimary,
+                      color: item.value == value ? (color ?? theme.accent) : theme.textPrimary,
                       fontWeight: item.value == value ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
@@ -67,9 +68,9 @@ class MossDropdown<T> extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(label, style: const TextStyle(fontSize: kTextBase, color: kTextPrimary)),
+                child: Text(label, style: TextStyle(fontSize: kTextBase, color: theme.textPrimary)),
               ),
-              Icon(Icons.arrow_drop_down, size: 16, color: kTextSecondary),
+              Icon(Icons.arrow_drop_down, size: 16, color: theme.textSecondary),
             ],
           ),
         ),
@@ -105,29 +106,30 @@ class MossTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return TextField(
       controller: controller,
       onChanged: onChanged,
       maxLines: maxLines,
       expands: expands,
       textAlignVertical: TextAlignVertical.top,
-      style: const TextStyle(fontSize: kTextBase),
+      style: TextStyle(fontSize: kTextBase, color: theme.textPrimary),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(fontSize: kTextBase, color: kTextMuted),
+        hintStyle: TextStyle(fontSize: kTextBase, color: theme.textMuted),
         contentPadding: const EdgeInsets.symmetric(horizontal: kS10, vertical: kS8),
         filled: true,
-        fillColor: kBg,
+        fillColor: theme.bg,
         border: OutlineInputBorder(
-          borderSide: const BorderSide(color: kBorder),
+          borderSide: BorderSide(color: theme.border),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kBorder),
+          borderSide: BorderSide(color: theme.border),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: color ?? kAccent),
+          borderSide: BorderSide(color: color ?? theme.accent),
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         isDense: true,
@@ -214,8 +216,8 @@ class MossSettingsRow extends StatelessWidget {
           width: 120,
           child: Text(label, style: TextStyle(fontSize: kTextBase, color: kTextSecondary)),
         ),
-        const Spacer(),
-        control,
+        const SizedBox(width: kS8),
+        Expanded(child: control),
       ],
     );
   }
@@ -276,6 +278,8 @@ class MossSettingsNavItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        splashColor: color.withValues(alpha: 0.12),
+        highlightColor: color.withValues(alpha: 0.05),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),

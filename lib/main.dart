@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 
 import 'services/app_state.dart';
@@ -16,25 +14,54 @@ void main() async {
   runApp(const MossTTSApp());
 }
 
-class MossTTSApp extends StatelessWidget {
+class MossTTSApp extends StatefulWidget {
   const MossTTSApp({super.key});
+
+  @override
+  State<MossTTSApp> createState() => _MossTTSAppState();
+}
+
+class _MossTTSAppState extends State<MossTTSApp> {
+  bool _isDark = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDark = SettingsService.themeMode == 'dark';
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _isDark = !_isDark;
+      SettingsService.setThemeMode(_isDark ? 'dark' : 'light');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MOSS-TTS-Nano',
+      title: 'CTTS',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: false,
         fontFamily: kFontFamily,
       ),
-      home: const HomePage(),
+      home: _themeWrapper(),
+    );
+  }
+
+  Widget _themeWrapper() {
+    return MossTheme(
+      data: _isDark ? MossThemeData.dark : MossThemeData.light,
+      isDark: _isDark,
+      child: HomePage(onThemeToggle: _toggleTheme),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onThemeToggle;
+  const HomePage({super.key, this.onThemeToggle});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -58,12 +85,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return AppState(
       controller: _ctrl,
       child: ListenableBuilder(
         listenable: _ctrl,
         builder: (context, _) => Scaffold(
-          backgroundColor: kBg,
+          backgroundColor: theme.bg,
           body: MossBackground(
             theme: kTabColorSeries[_tab],
             tabIndex: _tab,
@@ -72,9 +100,20 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   _TabBar(tab: _tab, labels: _tabLabels, colors: kTabColors, onChanged: (i) => setState(() => _tab = i)),
                   Expanded(
-                    child: IndexedStack(index: _tab, children: _pages),
+                    child: IndexedStack(index: _tab, children: [
+                      SinglePage(theme: kTabColorSeries[0]),
+                      BookPage(theme: kTabColorSeries[1]),
+                      VoicesPage(theme: kTabColorSeries[2]),
+                      SettingsPage(
+                        theme: kTabColorSeries[3],
+                        onThemeToggle: widget.onThemeToggle,
+                      ),
+                    ]),
                   ),
-                  MossStatusBar(status: _ctrl.status),
+                  MossStatusBar(
+                    status: _ctrl.status,
+                    onThemeToggle: widget.onThemeToggle,
+                  ),
                 ],
               ),
             ),
@@ -86,13 +125,6 @@ class _HomePageState extends State<HomePage> {
 }
 
 const _tabLabels = ['单次生成', '有声书', '音色管理', '设置'];
-
-List<Widget> get _pages => [
-  SinglePage(theme: kTabColorSeries[0]),
-  BookPage(theme: kTabColorSeries[1]),
-  VoicesPage(theme: kTabColorSeries[2]),
-  SettingsPage(theme: kTabColorSeries[3]),
-];
 
 // ─── Tab 栏 — 流体果冻 ──────────────────────────────────────────────────
 class _TabBar extends StatefulWidget {
@@ -111,7 +143,6 @@ class _TabBar extends StatefulWidget {
 
 class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  final LayerLink _layerLink = LayerLink();
   int _prevTab = 0;
 
   @override
@@ -140,6 +171,7 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kS8, vertical: kS6),
       child: LayoutBuilder(
@@ -170,7 +202,7 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
             height: 34,
             child: Stack(
               children: [
-                // ── 流体果冻云朵指示器（磨砂玻璃） ──
+                // ── 流体果冻云朵指示器 ──
                 Positioned(
                   left: left,
                   top: 0,
@@ -180,18 +212,12 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
                     alignment: Alignment.center,
                     transform: Matrix4.identity()
                       ..scale(scaleX, scaleY),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(radius),
-                      child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: widget.colors[widget.tab].withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(radius),
-                            border: Border.all(
-                              color: widget.colors[widget.tab].withValues(alpha: 0.35),
-                            ),
-                          ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.colors[widget.tab].withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(radius),
+                        border: Border.all(
+                          color: widget.colors[widget.tab].withValues(alpha: 0.35),
                         ),
                       ),
                     ),
@@ -216,7 +242,7 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
                                 Icon(
                                   _tabIcons[i],
                                   size: 14,
-                                  color: active ? widget.colors[i] : kTextSecondary,
+                                  color: active ? widget.colors[i] : theme.textSecondary,
                                 ),
                                 const SizedBox(width: kS6),
                                 Text(
@@ -224,7 +250,7 @@ class _TabBarState extends State<_TabBar> with SingleTickerProviderStateMixin {
                                   style: TextStyle(
                                     fontSize: kTextBase,
                                     fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                                    color: active ? widget.colors[i] : kTextSecondary,
+                                    color: active ? widget.colors[i] : theme.textSecondary,
                                   ),
                                 ),
                               ],

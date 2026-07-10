@@ -4,7 +4,8 @@ import '../theme/components.dart';
 
 class AppearanceSettings extends StatelessWidget {
   final Color color;
-  const AppearanceSettings({required this.color});
+  final VoidCallback? onThemeToggle;
+  const AppearanceSettings({required this.color, this.onThemeToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +19,9 @@ class AppearanceSettings extends StatelessWidget {
               label: '主题模式',
               control: Row(
                 children: [
-                  _themeChip('light', '亮色', Icons.light_mode),
+                  _themeChip(context, 'light', '亮色', Icons.light_mode),
                   const SizedBox(width: kS8),
-                  _themeChip('dark', '暗色', Icons.dark_mode),
+                  _themeChip(context, 'dark', '暗色', Icons.dark_mode),
                 ],
               ),
             ),
@@ -50,26 +51,31 @@ class AppearanceSettings extends StatelessWidget {
     );
   }
 
-  Widget _themeChip(String mode, String label, IconData icon) {
+  Widget _themeChip(BuildContext context, String mode, String label, IconData icon) {
+    final theme = MossTheme.of(context);
     final active = SettingsService.themeMode == mode;
+    final accent = color;
     return Expanded(
       child: GestureDetector(
-        onTap: () => SettingsService.setThemeMode(mode),
+        onTap: () {
+          SettingsService.setThemeMode(mode);
+          onThemeToggle?.call();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: kS8),
           decoration: BoxDecoration(
-            color: active ? kAccent.withValues(alpha: 0.1) : kBg,
+            color: active ? accent.withValues(alpha: 0.15) : theme.bg,
             borderRadius: BorderRadius.circular(kRadiusMd),
-            border: Border.all(color: active ? kAccent : kBorder),
+            border: Border.all(color: active ? accent : theme.border),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: active ? kAccent : kTextSecondary),
+              Icon(icon, size: 14, color: active ? accent : theme.textSecondary),
               const SizedBox(width: kS6),
               Text(label, style: TextStyle(
                 fontSize: kTextBase,
-                color: active ? kAccent : kTextPrimary,
+                color: active ? accent : theme.textPrimary,
                 fontWeight: active ? FontWeight.w600 : FontWeight.normal,
               )),
             ],

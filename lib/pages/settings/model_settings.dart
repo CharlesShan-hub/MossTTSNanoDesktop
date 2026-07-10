@@ -17,15 +17,15 @@ class ModelSettings extends StatelessWidget {
             description: 'MOSS-TTS-Nano 是一个轻量级的语音合成模型',
             child: Column(
               children: [
-                _infoRow('模型名称', 'MOSS-TTS-Nano-100M'),
+                _infoRow(context, '模型名称', 'MOSS-TTS-Nano-100M'),
                 const SizedBox(height: kS8),
-                _infoRow('架构类型', 'Attention-based AR Decoder + AudioCodec'),
+                _infoRow(context, '架构类型', 'Attention-based AR Decoder + AudioCodec'),
                 const SizedBox(height: kS8),
-                _infoRow('参数量', '约 100M'),
+                _infoRow(context, '参数量', '约 100M'),
                 const SizedBox(height: kS8),
-                _infoRow('支持语言', '中文 / English'),
+                _infoRow(context, '支持语言', '中文 / English'),
                 const SizedBox(height: kS8),
-                _infoRow('采样率', '48000 Hz'),
+                _infoRow(context, '采样率', '48000 Hz'),
               ],
             ),
           ),
@@ -40,14 +40,15 @@ class ModelSettings extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(BuildContext context, String label, String value) {
+    final theme = MossTheme.of(context);
     return Row(
       children: [
         SizedBox(
           width: 100,
-          child: Text(label, style: TextStyle(fontSize: kTextBase, color: kTextSecondary)),
+          child: Text(label, style: TextStyle(fontSize: kTextBase, color: theme.textSecondary)),
         ),
-        Text(value, style: TextStyle(fontSize: kTextBase, color: kTextPrimary)),
+        Text(value, style: TextStyle(fontSize: kTextBase, color: theme.textPrimary)),
       ],
     );
   }
@@ -59,13 +60,14 @@ class _GitHubLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     const url = 'https://github.com/OpenMOSS/MOSS-TTS-Nano';
     return Container(
       padding: const EdgeInsets.all(kS12),
       decoration: BoxDecoration(
-        color: kBg,
+        color: theme.bg,
         borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         children: [

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../services/app_state.dart';
-import '../services/settings_service.dart';
 import 'theme/components.dart';
 import 'settings/model_settings.dart';
 import 'settings/param_settings.dart';
@@ -11,7 +9,8 @@ import 'settings/shortcuts_settings.dart';
 
 class SettingsPage extends StatefulWidget {
   final ColorSeries theme;
-  const SettingsPage({super.key, required this.theme});
+  final VoidCallback? onThemeToggle;
+  const SettingsPage({super.key, required this.theme, this.onThemeToggle});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -69,7 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
       case 0: return ModelSettings(color: accent);
       case 1: return ParamSettings(color: accent);
       case 2: return ApiServiceSettings(color: accent);
-      case 3: return AppearanceSettings(color: accent);
+      case 3: return AppearanceSettings(color: accent, onThemeToggle: widget.onThemeToggle);
       case 4: return ShortcutsSettings();
       default: return const SizedBox.shrink();
     }
