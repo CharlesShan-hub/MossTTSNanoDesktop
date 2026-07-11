@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/voice.dart';
+import '../../../services/i18n_service.dart';
 import '../theme/components.dart';
 
 Color _langBadgeColor(String lang) {
@@ -63,21 +64,21 @@ class VoiceCard extends StatelessWidget {
             children: [
               MossIconButton(
                 icon: isPlaying ? Icons.stop : Icons.play_arrow,
-                tooltip: '试听',
+                tooltip: I18n.t('voices.play'),
                 onTap: onPlay,
                 color: isPlaying ? themeAccent : null,
               ),
               const SizedBox(width: kS8),
               MossIconButton(
                 icon: isHidden ? Icons.visibility_off : Icons.visibility_outlined,
-                tooltip: isHidden ? '显示' : '隐藏',
+                tooltip: isHidden ? I18n.t('voices.unhide') : I18n.t('voices.hide'),
                 onTap: onToggleHidden,
                 color: isHidden ? themeAccent.withValues(alpha: 0.5) : null,
               ),
               const SizedBox(width: kS8),
-              MossIconButton(icon: Icons.edit_outlined, tooltip: '编辑', onTap: onEdit),
+              MossIconButton(icon: Icons.edit_outlined, tooltip: I18n.t('voices.edit'), onTap: onEdit),
               const SizedBox(width: kS8),
-              MossIconButton(icon: Icons.delete_outline, tooltip: '删除', onTap: onDelete, color: theme.error),
+              MossIconButton(icon: Icons.delete_outline, tooltip: I18n.t('voices.delete'), onTap: onDelete, color: theme.error),
             ],
           ),
         ],

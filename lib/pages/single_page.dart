@@ -9,6 +9,7 @@ import '../models/voice.dart';
 import '../services/voice_service.dart';
 import '../services/app_state.dart';
 import '../services/settings_service.dart';
+import '../services/i18n_service.dart';
 import 'theme/components.dart';
 import 'single/controls_bar.dart';
 import 'single/voice_selector.dart';
@@ -135,12 +136,12 @@ class _SinglePageState extends State<SinglePage> {
       await File(_lastWavPath!).copy(dest);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('已保存'), duration: const Duration(seconds: 4),
-          action: SnackBarAction(label: '🔍 打开目录', onPressed: () => Process.run('open', ['-R', dest])),
+          content: Text(I18n.t('single.saved')), duration: const Duration(seconds: 4),
+          action: SnackBarAction(label: I18n.t('single.openDir'), onPressed: () => Process.run('open', ['-R', dest])),
         ));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(I18n.t('single.saveFailed', params: {'e': '$e'}))));
     }
   }
 
@@ -163,7 +164,7 @@ class _SinglePageState extends State<SinglePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     MossSidebarSection(
-                      title: '音色',
+                      title: I18n.t('single.voiceLabel'),
                       child: VoiceSelector(
                         voices: _voices,
                         selectedVoiceId: _selectedVoiceId,
@@ -181,7 +182,7 @@ class _SinglePageState extends State<SinglePage> {
                           onTap: () {
                             SettingsService.setDefaultVoiceId(_selectedVoiceId!);
                             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('已设为默认音色'), duration: Duration(seconds: 1)),
+                              SnackBar(content: Text(I18n.t('single.defaultSet')), duration: const Duration(seconds: 1)),
                             );
                           },
                           child: Row(
@@ -189,14 +190,14 @@ class _SinglePageState extends State<SinglePage> {
                             children: [
                               Icon(Icons.star_outline, size: 12, color: accent),
                               const SizedBox(width: kS4),
-                              Text('设为默认音色', style: TextStyle(fontSize: kTextXs, color: accent)),
+                              Text(I18n.t('single.defaultSet'), style: TextStyle(fontSize: kTextXs, color: accent)),
                             ],
                           ),
                         ),
                       ),
                     ],
                     const SizedBox(height: kS8),
-                    MossSidebarSection(title: '高级参数', child: AdvParamsPanel(onChanged: () { if (mounted) setState(() {}); })),
+                    MossSidebarSection(title: I18n.t('single.params'), child: AdvParamsPanel(onChanged: () { if (mounted) setState(() {}); })),
                   ],
                 ),
               ),
@@ -215,7 +216,7 @@ class _SinglePageState extends State<SinglePage> {
                   maxLines: null, expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   decoration: InputDecoration(
-                    hintText: '输入要合成的文字...',
+                    hintText: I18n.t('single.textPlaceholder'),
                     hintStyle: TextStyle(fontSize: kTextMd, color: theme.textMuted),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(kRadiusLg), borderSide: BorderSide.none),
                     filled: true, fillColor: Colors.transparent,
@@ -232,7 +233,7 @@ class _SinglePageState extends State<SinglePage> {
                     : _lastWavPath != null
                         ? _buildPlaybackBar(theme, accent, canGenerate)
                         : IdleBar(
-                            textLength: '${_textCtrl.text.length} 字',
+                            textLength: I18n.t('single.charCount', params: {'n': _textCtrl.text.length.toString()}),
                             canGenerate: canGenerate,
                             onGenerate: () => _generateAndPlay(autoSelectVoice: true),
                           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/i18n_service.dart';
 import '../services/settings_service.dart';
 import 'theme/components.dart';
 
@@ -15,7 +16,7 @@ class BookPage extends StatelessWidget {
         MossGlassSidebar(
           margin: const EdgeInsets.fromLTRB(kS16, kS16, 0, kS16),
           children: [
-            MossSidebarSection(title: '有声书', child: const SizedBox.shrink()),
+            MossSidebarSection(title: I18n.t('tabs.book'), child: const SizedBox.shrink()),
           ],
         ),
         Expanded(child: MossGlassPanel(
@@ -26,7 +27,7 @@ class BookPage extends StatelessWidget {
             children: [
               Icon(Icons.menu_book_rounded, size: 48, color: theme.textMuted),
               const SizedBox(height: kS16),
-              Text('有声书功能即将上线',
+              Text(I18n.t('book.comingSoon'),
                 style: TextStyle(fontSize: kTextLg, color: theme.textSecondary)),
               const SizedBox(height: kS24),
               _BookSettingsButton(theme: this.theme),
@@ -45,15 +46,15 @@ class _BookSettingsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MossButton(
-      text: '默认参数',
+      text: I18n.t('book.defaultParams'),
       icon: Icons.tune,
       type: MossButtonType.secondary,
       color: theme.main,
       onTap: () => showMossDialog(
         context: context,
-        title: '有声书默认参数',
+        title: I18n.t('book.dialogTitle'),
         content: const _ParamDialogContent(),
-        confirmText: '确定',
+        confirmText: I18n.t('book.dialogConfirm'),
       ),
     );
   }
@@ -94,8 +95,8 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
           mainAxisSize: MainAxisSize.min,
           children: [
             MossSettingsSlider(
-              label: '温度',
-              hint: '越高越随机',
+              label: I18n.t('single.paramTemp'),
+              hint: I18n.t('single.hintTemp'),
               value: _temperature,
               min: 0.1, max: 2.0, divisions: 38,
               formatValue: (v) => v.toStringAsFixed(2),
@@ -105,8 +106,8 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
               }),
             ),
             MossSettingsSlider(
-              label: 'Top-K',
-              hint: '候选 token 数',
+              label: I18n.t('single.paramTopK'),
+              hint: I18n.t('single.hintTopK'),
               value: _topK,
               min: 1, max: 100, divisions: 99,
               formatValue: (v) => v.round().toString(),
@@ -116,8 +117,8 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
               }),
             ),
             MossSettingsSlider(
-              label: 'Top-P',
-              hint: '累积概率阈值',
+              label: I18n.t('single.paramTopP'),
+              hint: I18n.t('single.hintTopP'),
               value: _topP,
               min: 0.1, max: 1.0, divisions: 18,
               formatValue: (v) => v.toStringAsFixed(2),
@@ -127,8 +128,8 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
               }),
             ),
             MossSettingsSlider(
-              label: '重复惩罚',
-              hint: '越高越不重复',
+              label: I18n.t('single.paramRep'),
+              hint: I18n.t('single.hintRep'),
               value: _repPenalty,
               min: 1.0, max: 2.0, divisions: 20,
               formatValue: (v) => v.toStringAsFixed(2),
@@ -138,8 +139,8 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
               }),
             ),
             MossSettingsSlider(
-              label: '最大帧',
-              hint: '越长音频越久',
+              label: I18n.t('single.paramMaxFrames'),
+              hint: I18n.t('single.hintMaxFrames'),
               value: _maxFrames,
               min: 50, max: 1000, divisions: 38,
               formatValue: (v) => v.round().toString(),
@@ -149,12 +150,12 @@ class _ParamDialogContentState extends State<_ParamDialogContent> {
               }),
             ),
             MossSettingsRow(
-              label: '种子',
+              label: I18n.t('single.paramSeed'),
               control: SizedBox(
                 width: 120,
                 child: MossTextField(
                   controller: TextEditingController(text: _seed.toString()),
-                  hintText: '0 = 随机',
+                  hintText: I18n.t('single.hintSeed'),
                   onChanged: (v) {
                     final parsed = int.tryParse(v);
                     if (parsed != null) {

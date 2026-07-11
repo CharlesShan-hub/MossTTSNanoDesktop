@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/i18n_service.dart';
 import '../theme/components.dart';
 
 class ModelSettings extends StatelessWidget {
@@ -13,26 +14,26 @@ class ModelSettings extends StatelessWidget {
       child: Column(
         children: [
           MossSettingsGroup(
-            title: '当前模型',
-            description: 'MOSS-TTS-Nano 是一个轻量级的语音合成模型',
+            title: I18n.t('settings.currentModel'),
+            description: I18n.t('settings.modelDesc'),
             child: Column(
               children: [
-                _infoRow(context, '模型名称', 'MOSS-TTS-Nano-100M'),
+                _infoRow(context, I18n.t('settings.modelName'), 'MOSS-TTS-Nano-100M'),
                 const SizedBox(height: kS8),
-                _infoRow(context, '架构类型', 'Attention-based AR Decoder + AudioCodec'),
+                _infoRow(context, I18n.t('settings.modelArch'), I18n.t('settings.modelArchValue')),
                 const SizedBox(height: kS8),
-                _infoRow(context, '参数量', '约 100M'),
+                _infoRow(context, I18n.t('settings.modelParams'), I18n.t('settings.modelParamsValue')),
                 const SizedBox(height: kS8),
-                _infoRow(context, '支持语言', '中文 / English'),
+                _infoRow(context, I18n.t('settings.modelLangs'), I18n.t('settings.modelLangsValue')),
                 const SizedBox(height: kS8),
-                _infoRow(context, '采样率', '48000 Hz'),
+                _infoRow(context, I18n.t('settings.modelSampleRate'), I18n.t('settings.modelSampleRateValue')),
               ],
             ),
           ),
           const SizedBox(height: kS16),
           MossSettingsGroup(
-            title: '开源地址',
-            description: '欢迎 Star & Fork',
+            title: I18n.t('settings.repoUrl'),
+            description: I18n.t('settings.repoDesc'),
             child: _GitHubLink(color: color),
           ),
         ],
@@ -81,7 +82,7 @@ class _GitHubLink extends StatelessWidget {
           ),
           const SizedBox(width: kS8),
           MossButton(
-            text: '复制',
+            text: I18n.t('settings.copy'),
             icon: Icons.content_copy,
             type: MossButtonType.ghost,
             color: color,
@@ -89,7 +90,7 @@ class _GitHubLink extends StatelessWidget {
             onTap: () {
               Clipboard.setData(const ClipboardData(text: url));
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('已复制链接'), duration: Duration(seconds: 1)),
+                SnackBar(content: Text(I18n.t('settings.copied')), duration: const Duration(seconds: 1)),
               );
             },
           ),

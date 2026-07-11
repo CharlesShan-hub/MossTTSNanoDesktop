@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/settings_service.dart';
+import '../../../services/i18n_service.dart';
 import '../theme/components.dart';
 import 'param_dialog.dart';
 
@@ -17,12 +18,12 @@ class AdvParamsPanel extends StatelessWidget {
       padding: const EdgeInsets.all(kS12),
       child: Column(
         children: [
-          _row(theme, '温度', SettingsService.temperature.toStringAsFixed(2)),
-          _row(theme, 'Top-K', SettingsService.topK.toString()),
-          _row(theme, 'Top-P', SettingsService.topP.toStringAsFixed(2)),
-          _row(theme, '重复惩罚', SettingsService.repetitionPenalty.toStringAsFixed(2)),
-          _row(theme, '最大帧', SettingsService.maxFrames.toString()),
-          _row(theme, '种子', SettingsService.seed.toString()),
+          _row(theme, I18n.t('single.paramTemp'), SettingsService.temperature.toStringAsFixed(2)),
+          _row(theme, I18n.t('single.paramTopK'), SettingsService.topK.toString()),
+          _row(theme, I18n.t('single.paramTopP'), SettingsService.topP.toStringAsFixed(2)),
+          _row(theme, I18n.t('single.paramRep'), SettingsService.repetitionPenalty.toStringAsFixed(2)),
+          _row(theme, I18n.t('single.paramMaxFrames'), SettingsService.maxFrames.toString()),
+          _row(theme, I18n.t('single.paramSeed'), SettingsService.seed.toString()),
           const SizedBox(height: kS4),
           Center(
             child: Material(
@@ -37,7 +38,7 @@ class AdvParamsPanel extends StatelessWidget {
                     children: [
                       Icon(Icons.edit_outlined, size: 12, color: theme.accent),
                       const SizedBox(width: kS4),
-                      Text('编辑', style: TextStyle(fontSize: kTextXs, color: theme.accent)),
+                      Text(I18n.t('single.editParams'), style: TextStyle(fontSize: kTextXs, color: theme.accent)),
                     ],
                   ),
                 ),
@@ -65,9 +66,9 @@ class AdvParamsPanel extends StatelessWidget {
   Future<void> _edit(BuildContext context) async {
     await showMossDialog(
       context: context,
-      title: '生成参数',
+      title: I18n.t('single.dialogTitle'),
       content: const SingleParamDialog(),
-      confirmText: '确定',
+      confirmText: I18n.t('single.dialogConfirm'),
     );
     onChanged?.call();
   }

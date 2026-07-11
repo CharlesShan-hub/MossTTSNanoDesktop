@@ -70,8 +70,9 @@ class MossStatusDot extends StatelessWidget {
 // ─── MossStatusBar ────────────────────────────────────────────────────────
 class MossStatusBar extends StatefulWidget {
   final String status;
+  final bool ready;
   final VoidCallback? onThemeToggle;
-  const MossStatusBar({super.key, required this.status, this.onThemeToggle});
+  const MossStatusBar({super.key, required this.status, this.ready = true, this.onThemeToggle});
 
   @override
   State<MossStatusBar> createState() => _MossStatusBarState();
@@ -103,7 +104,7 @@ class _MossStatusBarState extends State<MossStatusBar> {
       ),
       child: Row(
         children: [
-          MossStatusDot(active: widget.status.contains('就绪')),
+          MossStatusDot(active: widget.ready),
           const SizedBox(width: kS6),
           Expanded(
             child: Text(widget.status, style: TextStyle(fontSize: kTextSm, color: theme.textSecondary),

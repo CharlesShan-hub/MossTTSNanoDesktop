@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/i18n_service.dart';
 import '../../services/settings_service.dart';
 import '../theme/components.dart';
 
@@ -13,35 +14,38 @@ class AppearanceSettings extends StatelessWidget {
       child: Column(
         children: [
           MossSettingsGroup(
-            title: '主题',
-            description: '切换亮色/暗色模式',
+            title: I18n.t('settings.theme'),
+            description: I18n.t('settings.themeDesc'),
             child: MossSettingsRow(
-              label: '主题模式',
+              label: I18n.t('settings.themeMode'),
               control: Row(
                 children: [
-                  _themeChip(context, 'light', '亮色', Icons.light_mode),
+                  _themeChip(context, 'light', I18n.t('settings.light'), Icons.light_mode),
                   const SizedBox(width: kS8),
-                  _themeChip(context, 'dark', '暗色', Icons.dark_mode),
+                  _themeChip(context, 'dark', I18n.t('settings.dark'), Icons.dark_mode),
                 ],
               ),
             ),
           ),
           const SizedBox(height: kS16),
           MossSettingsGroup(
-            title: '语言',
-            description: '界面语言设置',
+            title: I18n.t('settings.language'),
+            description: I18n.t('settings.langDesc2'),
             child: MossSettingsRow(
-              label: '语言',
+              label: I18n.t('settings.language'),
               control: MossDropdown<String>(
                 value: SettingsService.language,
                 onChanged: (v) {
-                  if (v != null) SettingsService.setLanguage(v);
+                  if (v != null) {
+                    SettingsService.setLanguage(v);
+                    I18n.load(v);
+                  }
                 },
-                placeholder: '选择语言',
+                placeholder: I18n.t('settings.langSelect'),
                 color: color,
-                items: const [
-                  DropdownItem('中文', 'zh'),
-                  DropdownItem('English', 'en'),
+                items: [
+                  DropdownItem(I18n.t('settings.zh'), 'zh'),
+                  DropdownItem(I18n.t('settings.en'), 'en'),
                 ],
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/i18n_service.dart';
 import '../theme/components.dart';
 
 /// 底部控制栏 — 空闲/进度/播放三种状态
@@ -22,12 +23,12 @@ class IdleBar extends StatelessWidget {
         Text(textLength, style: TextStyle(fontSize: kTextSm, color: theme.textSecondary)),
         const Spacer(),
         MossButton(
-          text: '生成语音',
+          text: I18n.t('single.generate'),
           icon: Icons.play_arrow,
           onTap: canGenerate ? onGenerate : null,
         ),
         const SizedBox(width: kS8),
-        Text('⌘+Enter', style: TextStyle(fontSize: kTextSm, color: theme.textMuted)),
+        Text(I18n.t('single.shortcut'), style: TextStyle(fontSize: kTextSm, color: theme.textMuted)),
       ],
     );
   }
@@ -108,7 +109,7 @@ class PlaybackBar extends StatelessWidget {
       children: [
         MossIconButton(
           icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-          tooltip: playing ? '暂停' : '播放',
+          tooltip: playing ? 'Pause' : 'Play',
           onTap: onPlayPause,
           color: themeColor, size: 20,
         ),
@@ -130,9 +131,9 @@ class PlaybackBar extends StatelessWidget {
         ),
         Text(durText, style: TextStyle(fontSize: kTextXs, color: theme.textSecondary)),
         const SizedBox(width: kS8),
-        MossButton(text: '保存', icon: Icons.save_alt, type: MossButtonType.secondary, onTap: onSave),
+        MossButton(text: I18n.t('single.save'), icon: Icons.save_alt, type: MossButtonType.secondary, onTap: onSave),
         const SizedBox(width: kS8),
-        MossButton(text: '生成语音', icon: Icons.play_arrow, onTap: onGenerate),
+        MossButton(text: I18n.t('single.generate'), icon: Icons.play_arrow, onTap: onGenerate),
       ],
     );
   }

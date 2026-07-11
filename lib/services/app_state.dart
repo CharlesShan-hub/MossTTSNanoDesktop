@@ -13,6 +13,7 @@ import 'voice_service.dart';
 import 'settings_service.dart';
 import 'audio_encoder.dart';
 import 'wav_writer.dart';
+import 'i18n_service.dart';
 
 /// 全局 TTS 控制器，管理模型加载和合成
 class TtsController extends ChangeNotifier {
@@ -21,7 +22,7 @@ class TtsController extends ChangeNotifier {
   Map<String, dynamic>? _manifest;
   Map<String, dynamic>? _codecMeta;
   bool _loading = false;
-  String _status = '就绪';
+  String _status = '';
   bool _loaded = false;
   TtsServer? _apiServer;
 
@@ -31,9 +32,20 @@ class TtsController extends ChangeNotifier {
   Map<String, dynamic>? get codecMeta => _codecMeta;
   bool get loaded => _loaded;
   bool get loading => _loading;
-  String get status => _status;
+  String get status => _status.isNotEmpty ? _status : I18n.t('app.ready');
   TtsServer? get apiServer => _apiServer;
   bool get apiRunning => _apiServer?.isRunning ?? false;
+
+  TtsController() {
+    I18n.notifier.addListener(_onLangChanged);
+  }
+
+  void _onLangChanged() {
+    // 语言切换后，清除静态状态使其重新翻译
+    if (_loading || _status.isEmpty) return;
+    _status = '';
+    notifyListeners();
+  }
 
   set status(String s) {
     _status = s;
@@ -43,13 +55,13 @@ class TtsController extends ChangeNotifier {
   Future<void> loadModels() async {
     if (_loaded || _loading) return;
     _loading = true;
-    status = '加载 ONNX 模型中...';
+    status = I18n.t('app.loadingModel');
 
     try {
       _engine = OnnxEngine();
       await _engine!.load(bundleBasePath: 'assets/models');
 
-      status = '加载分词器中...';
+      status = I18n.t('app.loadingTokenizer');
       _tokenizer = MossTokenizer();
       await _tokenizer!.load(assetPath: 'assets/models/MOSS-TTS-Nano-100M-ONNX/tokenizer.model');
 
@@ -64,14 +76,14 @@ class TtsController extends ChangeNotifier {
       _codecMeta = jsonDecode(cr) as Map<String, dynamic>;
 
       _loaded = true;
-      status = '就绪 · 模型加载完成';
+      status = I18n.t('app.modelReady');
       // 自动启动 API 服务
       if (SettingsService.apiEnabled) {
         await startApiServer();
       }
     } catch (e, st) {
       debugPrint('[TtsController] 加载失败: $e\n$st');
-      status = '模型加载失败: $e';
+      status = I18n.t('app.modelFailed', params: {'e': '$e'});
     } finally {
       _loading = false;
       notifyListeners();
@@ -84,10 +96,10 @@ class TtsController extends ChangeNotifier {
     _apiServer = TtsServer(this);
     try {
       await _apiServer!.start(port: port);
-      status = 'API 服务运行中 :${_apiServer!.port}';
+      status = I18n.t('app.apiRunning', params: {'port': '${_apiServer!.port}'});
       notifyListeners();
     } catch (e) {
-      status = 'API 服务启动失败: $e';
+      status = I18n.t('app.apiFailed', params: {'e': '$e'});
       _apiServer = null;
       notifyListeners();
     }
@@ -98,7 +110,7 @@ class TtsController extends ChangeNotifier {
     if (_apiServer == null) return;
     await _apiServer!.stop();
     _apiServer = null;
-    status = 'API 服务已停止';
+    status = I18n.t('app.apiStopped');
     notifyListeners();
   }
 
@@ -115,7 +127,7 @@ class TtsController extends ChangeNotifier {
     if (voice == null) return null;
 
     try {
-      status = '合成中...';
+      status = I18n.t('app.synthesizing');
 
       // 通过文件名匹配内置音色的 prompt_audio_codes
       final audioFileName = voice.file.split('/').last;
@@ -129,14 +141,14 @@ class TtsController extends ChangeNotifier {
             .toList();
       } else {
         // 非内置音色：运行时编码
-        status = '编码音色中...';
+        status = I18n.t('single.encodingVoice');
         final codes = await encodeAudioToCodes(
           assetPath: voice.file,
           engine: _engine!,
           codecMeta: _codecMeta!,
         );
         if (codes == null || codes.isEmpty) {
-          status = '音色编码失败: ${voice.file}';
+          status = I18n.t('single.encodeFailed', params: {'file': voice.file});
           return null;
         }
         promptCodes = codes;
@@ -162,7 +174,7 @@ class TtsController extends ChangeNotifier {
       const int maxTokens = 150;
       final textChunks =
           _tokenizer!.splitTextByTokenBudget(text, maxTokens: maxTokens);
-      status = '分块 ${textChunks.length} 段 ...';
+      status = I18n.t('single.chunkInfo', params: {'n': textChunks.length.toString()});
 
       // ── 2. 逐块推理 ──
       final allSamples = <double>[];
@@ -174,16 +186,16 @@ class TtsController extends ChangeNotifier {
         if (chunk.trim().isEmpty) continue;
 
         if (textChunks.length > 1) {
-          status = '分块 ${ci + 1}/${textChunks.length} ...';
+          status = I18n.t('single.chunkProgress', params: {'current': (ci + 1).toString(), 'total': textChunks.length.toString()});
         } else {
-          status = '推理中...';
+          status = I18n.t('single.inferring');
         }
 
         final textIds = _tokenizer!.encodeText(chunk);
         final req = inferencer.buildRequest(promptCodes, textIds);
         final frames = await inferencer.generate(req);
 
-        status = '解码音频中 (${frames.length} 帧)...';
+        status = I18n.t('single.decodingAudio', params: {'n': frames.length.toString()});
         final audioResult = await inferencer.decode(frames);
         if (audioResult.audioLength <= 0) continue;
 
@@ -207,7 +219,7 @@ class TtsController extends ChangeNotifier {
       }
 
       if (allSamples.isEmpty) {
-        status = '合成失败: 无音频输出';
+        status = I18n.t('single.noAudioOutput');
         return null;
       }
 
@@ -218,10 +230,10 @@ class TtsController extends ChangeNotifier {
       final wavPath = '${outDir.path}/output.wav';
       writeWav(wavPath, allSamples, sampleRate);
 
-      status = '合成完成';
+      status = I18n.t('app.success');
       return wavPath;
     } catch (e) {
-      status = '合成失败: $e';
+      status = I18n.t('app.failed', params: {'e': '$e'});
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/i18n_service.dart';
 import '../../services/app_state.dart';
 import '../../services/settings_service.dart';
 import '../theme/components.dart';
@@ -66,12 +67,12 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
       child: Column(
         children: [
           MossSettingsGroup(
-            title: 'HTTP API 服务',
-            description: '启动后可通过 HTTP 请求调用 TTS 合成',
+            title: I18n.t('settings.apiService'),
+            description: I18n.t('settings.apiDesc'),
             child: Column(
               children: [
                 MossSettingsRow(
-                  label: '启用服务',
+                  label: I18n.t('settings.apiEnable'),
                   control: SizedBox(
                     width: 44, height: 24,
                     child: Switch(
@@ -83,7 +84,7 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
                 ),
                 const SizedBox(height: kS12),
                 MossSettingsRow(
-                  label: '端口号',
+                  label: I18n.t('settings.apiPort'),
                   control: SizedBox(
                     width: 120,
                     child: MossTextField(
@@ -104,17 +105,17 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
           ),
           const SizedBox(height: kS16),
           MossSettingsGroup(
-            title: '状态',
-            description: running ? '服务运行中' : '服务已停止',
+            title: I18n.t('settings.apiStatus'),
+            description: running ? I18n.t('settings.apiStatusRunning') : I18n.t('settings.apiStatusStopped'),
             child: Column(
               children: [
                 MossSettingsRow(
-                    label: '状态',
+                    label: I18n.t('settings.apiStatus'),
                     control: Row(
                       children: [
                         MossStatusDot(active: running),
                         const SizedBox(width: kS6),
-                        Text(running ? '运行中' : '已停止',
+                        Text(running ? I18n.t('settings.apiRunning') : I18n.t('settings.apiStopped'),
                           style: TextStyle(fontSize: kTextBase, color: running ? kSuccess : Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey)),
                       ],
                     ),
@@ -122,7 +123,7 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
                 if (running) ...[
                   const SizedBox(height: kS8),
                   MossSettingsRow(
-                    label: '地址',
+                    label: I18n.t('settings.apiAddress'),
                     control: Text('http://localhost:${server?.port ?? _port}',
                       style: TextStyle(fontSize: kTextBase, color: widget.color)),
                   ),
@@ -132,15 +133,15 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
           ),
           const SizedBox(height: kS16),
           MossSettingsGroup(
-            title: '接口文档',
-            description: '所有接口返回 JSON 或 WAV 音频',
+            title: I18n.t('settings.apiDocs'),
+            description: I18n.t('settings.apiDocsDesc'),
             child: Column(
               children: [
-                _endpointRow('POST', '/v1/tts', '合成语音 → WAV'),
+                _endpointRow('POST', '/v1/tts', I18n.t('settings.endpointTts')),
                 const SizedBox(height: kS6),
-                _endpointRow('GET', '/v1/voices', '音色列表 → JSON'),
+                _endpointRow('GET', '/v1/voices', I18n.t('settings.endpointVoices')),
                 const SizedBox(height: kS6),
-                _endpointRow('GET', '/v1/health', '健康检查 → JSON'),
+                _endpointRow('GET', '/v1/health', I18n.t('settings.endpointHealth')),
               ],
             ),
           ),

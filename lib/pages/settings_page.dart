@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/i18n_service.dart';
 import 'theme/components.dart';
 import 'settings/model_settings.dart';
 import 'settings/param_settings.dart';
@@ -19,12 +20,12 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   int _navIndex = 0;
 
-  final _navItems = const [
-    ('模型信息', Icons.memory),
-    ('生成参数', Icons.tune),
-    ('API 服务', Icons.cloud),
-    ('外观', Icons.palette_outlined),
-    ('快捷键', Icons.keyboard),
+  List<(String, IconData)> get _navItems => [
+    (I18n.t('settings.navModel'), Icons.memory),
+    (I18n.t('settings.navParams'), Icons.tune),
+    (I18n.t('settings.navApi'), Icons.cloud),
+    (I18n.t('settings.navAppearance'), Icons.palette_outlined),
+    (I18n.t('settings.navShortcuts'), Icons.keyboard),
   ];
 
   @override
@@ -37,7 +38,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(kS16, kS16, kS16, kS8),
-              child: Text('设置', style: TextStyle(
+              child: Text(I18n.t('settings.pageTitle'), style: TextStyle(
                 fontSize: kTextBase, fontWeight: FontWeight.w600,
                 color: theme.textSecondary, letterSpacing: 0.5,
               )),

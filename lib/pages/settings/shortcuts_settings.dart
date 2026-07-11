@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/i18n_service.dart';
 import '../theme/components.dart';
 
 class ShortcutsSettings extends StatelessWidget {
@@ -6,19 +7,19 @@ class ShortcutsSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = MossTheme.of(context);
     final shortcuts = [
-      ('⌘ + Enter', '生成语音'),
-      ('⌘ + S', '保存音频'),
-      ('⌘ + ,', '打开设置'),
-      ('⌘ + 1-4', '切换 Tab'),
-      ('⌘ + F', '搜索音色'),
+      ('⌘ + Enter', I18n.t('single.shortcutGenerate')),
+      ('⌘ + S', I18n.t('single.shortcutSave')),
+      ('⌘ + ,', I18n.t('single.shortcutSettings')),
+      ('⌘ + 1-4', I18n.t('single.shortcutTab')),
+      ('⌘ + F', I18n.t('single.shortcutSearch')),
     ];
 
     return SingleChildScrollView(
       child: Column(
         children: [
           MossSettingsGroup(
-            title: '键盘快捷键',
-            description: '提高操作效率的快捷键组合',
+            title: I18n.t('settings.shortcutsTitle'),
+            description: I18n.t('settings.shortcutsDesc'),
             child: Column(
               children: shortcuts.map((s) => Padding(
                 padding: const EdgeInsets.only(bottom: kS8),

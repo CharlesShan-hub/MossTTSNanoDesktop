@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'services/app_state.dart';
 import 'services/settings_service.dart';
+import 'services/i18n_service.dart';
+import 'services/macos_titlebar.dart';
 import 'pages/theme/components.dart';
 import 'pages/single_page.dart';
 import 'pages/book_page.dart';
@@ -11,6 +13,7 @@ import 'pages/settings_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SettingsService.init();
+  await I18n.load(SettingsService.language);
   runApp(const MossTTSApp());
 }
 
@@ -28,6 +31,19 @@ class _MossTTSAppState extends State<MossTTSApp> {
   void initState() {
     super.initState();
     _isDark = SettingsService.themeMode == 'dark';
+    // 延迟确保 native 通道就绪后再设置标题栏外观
+    WidgetsBinding.instance.addPostFrameCallback((_) => MacOSTitleBar.setDark(_isDark));
+    I18n.notifier.addListener(_onLangChanged);
+  }
+
+  @override
+  void dispose() {
+    I18n.notifier.removeListener(_onLangChanged);
+    super.dispose();
+  }
+
+  void _onLangChanged() {
+    if (mounted) setState(() {});
   }
 
   void _toggleTheme() {
@@ -35,6 +51,7 @@ class _MossTTSAppState extends State<MossTTSApp> {
       _isDark = !_isDark;
       SettingsService.setThemeMode(_isDark ? 'dark' : 'light');
     });
+    MacOSTitleBar.setDark(_isDark);
   }
 
   @override
@@ -112,6 +129,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   MossStatusBar(
                     status: _ctrl.status,
+                    ready: _ctrl.loaded,
                     onThemeToggle: widget.onThemeToggle,
                   ),
                 ],
@@ -124,7 +142,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-const _tabLabels = ['单次生成', '有声书', '音色管理', '设置'];
+List<String> get _tabLabels => [I18n.t('tabs.single'), I18n.t('tabs.book'), I18n.t('tabs.voices'), I18n.t('tabs.settings')];
 
 // ─── Tab 栏 — 流体果冻 ──────────────────────────────────────────────────
 class _TabBar extends StatefulWidget {
