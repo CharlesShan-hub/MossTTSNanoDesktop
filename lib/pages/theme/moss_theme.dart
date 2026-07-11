@@ -66,8 +66,8 @@ class MossThemeData {
     success: kSuccess,
     warning: kWarning,
     error: kError,
-    glassBg: Color(0xCC2C2C2E),   // 暗色半透 — 更实，避免灰蒙蒙
-    glassBorder: Color(0x3D48484A), // 暗色半透边框 — 略亮一点
+    glassBg: Color(0x66000000),   // 暗色玻璃 — 纯黑低透明度，不泛白
+    glassBorder: Color(0x2EFFFFFF), // 暗色半透边框
   );
 }
 
@@ -84,7 +84,7 @@ class MossTheme extends InheritedWidget {
   });
 
   static MossThemeData of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<MossTheme>()!.data;
+    return context.dependOnInheritedWidgetOfExactType<MossTheme>()?.data ?? MossThemeData.light;
   }
 
   static MossTheme? maybeOf(BuildContext context) {

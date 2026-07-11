@@ -83,70 +83,79 @@ class OnnxEngine {
     final rawCodecMeta = jsonDecode(await rootBundle.loadString(rawCodecMetaAssetPath)) as Map<String, dynamic>;
     codecMetaRaw = rawCodecMeta;
 
-    // ── 4. 复制模型文件到临时目录 ──
+    // ── 4. 复制模型文件到临时目录（仅首次执行） ──
     final tmp = tempDir ?? p.join(Directory.systemTemp.path, 'moss_onnx_cache');
     _tempDir = tmp;
-    // 清空旧缓存，避免文件锁冲突和磁盘膨胀
-    if (Directory(tmp).existsSync()) {
-      try { Directory(tmp).deleteSync(recursive: true); } catch (_) {}
-    }
+    final cachedFlag = p.join(tmp, '.cache_done');
     final ttsDir = p.join(tmp, 'MOSS-TTS-Nano-100M-ONNX');
     final codecDir = p.join(tmp, 'MOSS-Audio-Tokenizer-Nano-ONNX');
-    debugPrint('[ONNX] 临时目录: $tmp');
-    Directory(ttsDir).createSync(recursive: true);
-    Directory(codecDir).createSync(recursive: true);
 
-    // TTS 模型文件
-    final ttsModelFiles = [
-      ttsConfig!.files.prefill,
-      ttsConfig!.files.decodeStep,
-      ttsConfig!.files.localDecoder,
-      ttsConfig!.files.localCachedStep,
-      ttsConfig!.files.localFixedSampledFrame,
-    ];
-    debugPrint('[ONNX] TTS onnx 文件: $ttsModelFiles');
-    // 外部 .data 文件
-    final ttsDataFiles = <String>{};
-    for (final paths in ttsConfig!.externalDataFiles.values) {
-      for (final p in paths) {
-        ttsDataFiles.add(p);
+    if (!File(cachedFlag).existsSync()) {
+      // 清空旧缓存（如有），重新解压
+      if (Directory(tmp).existsSync()) {
+        try { Directory(tmp).deleteSync(recursive: true); } catch (_) {}
       }
-    }
-    debugPrint('[ONNX] TTS data 文件: $ttsDataFiles');
-    for (final f in [...ttsModelFiles, ...ttsDataFiles]) {
-      debugPrint('[ONNX] 复制 $f ...');
-      await _copyAssetToFile(
-        '$bundleBasePath/MOSS-TTS-Nano-100M-ONNX/$f',
-        p.join(ttsDir, f),
-      );
-    }
-    debugPrint('[ONNX] TTS 文件复制完成');
+      debugPrint('[ONNX] 临时目录: $tmp');
+      Directory(ttsDir).createSync(recursive: true);
+      Directory(codecDir).createSync(recursive: true);
 
-    // Codec 模型文件
-    final codecModelFiles = [
-      rawCodecMeta['files']['encode'] as String,
-      rawCodecMeta['files']['decode_full'] as String,
-      rawCodecMeta['files']['decode_step'] as String,
-    ];
-    final codecDataFiles = <String>{};
-    if (rawCodecMeta['external_data_files'] is Map) {
-      for (final paths in (rawCodecMeta['external_data_files'] as Map).values) {
-        if (paths is List) {
-          for (final p in paths) {
-            codecDataFiles.add(p as String);
+      // TTS 模型文件
+      final ttsModelFiles = [
+        ttsConfig!.files.prefill,
+        ttsConfig!.files.decodeStep,
+        ttsConfig!.files.localDecoder,
+        ttsConfig!.files.localCachedStep,
+        ttsConfig!.files.localFixedSampledFrame,
+      ];
+      debugPrint('[ONNX] TTS onnx 文件: $ttsModelFiles');
+      // 外部 .data 文件
+      final ttsDataFiles = <String>{};
+      for (final paths in ttsConfig!.externalDataFiles.values) {
+        for (final p in paths) {
+          ttsDataFiles.add(p);
+        }
+      }
+      debugPrint('[ONNX] TTS data 文件: $ttsDataFiles');
+      for (final f in [...ttsModelFiles, ...ttsDataFiles]) {
+        debugPrint('[ONNX] 复制 $f ...');
+        await _copyAssetToFile(
+          '$bundleBasePath/MOSS-TTS-Nano-100M-ONNX/$f',
+          p.join(ttsDir, f),
+        );
+      }
+      debugPrint('[ONNX] TTS 文件复制完成');
+
+      // Codec 模型文件
+      final codecModelFiles = [
+        rawCodecMeta['files']['encode'] as String,
+        rawCodecMeta['files']['decode_full'] as String,
+        rawCodecMeta['files']['decode_step'] as String,
+      ];
+      final codecDataFiles = <String>{};
+      if (rawCodecMeta['external_data_files'] is Map) {
+        for (final paths in (rawCodecMeta['external_data_files'] as Map).values) {
+          if (paths is List) {
+            for (final p in paths) {
+              codecDataFiles.add(p as String);
+            }
           }
         }
       }
+      debugPrint('[ONNX] Codec 文件: ${[...codecModelFiles, ...codecDataFiles]}');
+      for (final f in [...codecModelFiles, ...codecDataFiles]) {
+        debugPrint('[ONNX] 复制 $f ...');
+        await _copyAssetToFile(
+          '$bundleBasePath/MOSS-Audio-Tokenizer-Nano-ONNX/$f',
+          p.join(codecDir, f),
+        );
+      }
+      debugPrint('[ONNX] Codec 文件复制完成');
+      // 标记缓存完成
+      File(cachedFlag).writeAsStringSync('ok');
+      debugPrint('[ONNX] 缓存标记完成');
+    } else {
+      debugPrint('[ONNX] 缓存已就绪，跳过解压');
     }
-    debugPrint('[ONNX] Codec 文件: ${[...codecModelFiles, ...codecDataFiles]}');
-    for (final f in [...codecModelFiles, ...codecDataFiles]) {
-      debugPrint('[ONNX] 复制 $f ...');
-      await _copyAssetToFile(
-        '$bundleBasePath/MOSS-Audio-Tokenizer-Nano-ONNX/$f',
-        p.join(codecDir, f),
-      );
-    }
-    debugPrint('[ONNX] Codec 文件复制完成');
 
     // ── 5. 创建 Session（Python: ort.InferenceSession with SessionOptions） ──
     debugPrint('[ONNX] 开始创建 Session ...');

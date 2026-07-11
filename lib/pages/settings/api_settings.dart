@@ -43,7 +43,7 @@ class _ApiServiceSettingsState extends State<ApiServiceSettings> {
     super.dispose();
   }
 
-  void _onCtrlChanged() => setState(() {});
+  void _onCtrlChanged() { if (mounted) setState(() {}); }
 
   Future<void> _toggle(bool on) async {
     final ctrl = AppState.of(context);

@@ -31,14 +31,14 @@ const kGlassBorder = Color(0x14D2D2D7);
 const kGlassShadow = Color(0x08000000);
 const kBlurGlass   = 6.0;
 
-// 暗色模式
-const kDarkBg        = Color(0xFF1C1C1E);
-const kDarkSurface   = Color(0xFF2C2C2E);
-const kDarkSurfaceAlt = Color(0xFF3A3A3C);
+// 暗色模式 — 干净冷灰，避免脏感
+const kDarkBg        = Color(0xFF000000);
+const kDarkSurface   = Color(0xFF262628);
+const kDarkSurfaceAlt = Color(0xFF2C2C2E);
 const kDarkTextPrimary   = Color(0xFFF5F5F7);
-const kDarkTextSecondary = Color(0xFF98989D);
+const kDarkTextSecondary = Color(0xFF8E8E93);
 const kDarkTextMuted     = Color(0xFF636366);
-const kDarkBorder    = Color(0xFF48484A);
+const kDarkBorder    = Color(0xFF3A3A3C);
 
 // ─── 色系（每个 Tab 一套） ──────────────────────────────────────────────
 class ColorSeries {

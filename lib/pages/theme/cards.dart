@@ -204,14 +204,22 @@ class _MossBackgroundState extends State<MossBackground>
   @override
   Widget build(BuildContext context) {
     final c = MossTheme.of(context);
+    final isDark = c.bg == kDarkBg; // 检测是否暗黑模式
     final prevC = _prev;
     final curC = widget.theme ?? kBlue;
     final raw = _spreadCtrl.value;
     // 小球扩散：0.6s 内完成 (前 60% 的动画)
     final spreadV = (raw / 0.6).clamp(0.0, 1.0);
-    // 底色过渡：满 1.5s 慢慢变
-    final bgV = Curves.easeInOut.transform(raw);
-    final baseBg = Color.lerp(prevC.bg, c.bg, bgV)!;
+    // 环透明度跟随扩散进度渐入，避免突然闪亮
+    final ringAlpha = Curves.easeIn.transform(spreadV);
+    // 旧颜色在动画前半段渐隐至纯黑
+    final oldFade = 1.0 - (raw / 0.4).clamp(0.0, 1.0);
+    // 暗黑模式下颜色提亮 + 更高透明度，更鲜明
+    final colorBoost = isDark ? 1.5 : 1.0;
+    final curMain = curC.main;
+    final prevMain = prevC.main;
+    // 底色使用主题色
+    final baseBg = c.bg;
     // 半圆涟漪：圆心在对应 Tab 的上边沿，从上往下扩散
     final tabX = -0.75 + widget.tabIndex * 0.5;
     final spreadRadius = 0.1 + Curves.easeOut.transform(spreadV) * 2.5;
@@ -230,6 +238,28 @@ class _MossBackgroundState extends State<MossBackground>
       ),
       child: Stack(
         children: [
+          // ── 旧颜色涟漪渐隐（旧色 → 纯黑） ──
+          if (oldFade > 0 && _spreadCtrl.isAnimating)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(tabX, -1.7),
+                      radius: spreadRadius,
+                      colors: [
+                        Colors.transparent,
+                        prevMain.withValues(alpha: 0.20 * oldFade * colorBoost),
+                        prevMain.withValues(alpha: 0.05 * oldFade * colorBoost),
+                        Colors.transparent,
+                      ],
+                      stops: const [0, 0.35, 0.65, 1],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // ── 新颜色涟漪扩散 ──
           Positioned.fill(
             child: IgnorePointer(
               child: Container(
@@ -239,8 +269,8 @@ class _MossBackgroundState extends State<MossBackground>
                     radius: spreadRadius,
                     colors: [
                       Colors.transparent,
-                      curC.main.withValues(alpha: 0.20),
-                      curC.main.withValues(alpha: 0.05),
+                      curMain.withValues(alpha: 0.20 * ringAlpha * colorBoost),
+                      curMain.withValues(alpha: 0.05 * ringAlpha * colorBoost),
                       Colors.transparent,
                     ],
                     stops: const [0, 0.35, 0.65, 1],

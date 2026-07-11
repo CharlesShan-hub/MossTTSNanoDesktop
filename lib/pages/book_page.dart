@@ -9,6 +9,7 @@ class BookPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Row(
       children: [
         MossGlassSidebar(
@@ -23,12 +24,12 @@ class BookPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.menu_book_rounded, size: 48, color: kTextMuted),
+              Icon(Icons.menu_book_rounded, size: 48, color: theme.textMuted),
               const SizedBox(height: kS16),
               Text('有声书功能即将上线',
-                style: TextStyle(fontSize: kTextLg, color: kTextSecondary)),
+                style: TextStyle(fontSize: kTextLg, color: theme.textSecondary)),
               const SizedBox(height: kS24),
-              _BookSettingsButton(theme: theme),
+              _BookSettingsButton(theme: this.theme),
             ],
           ),
         )),

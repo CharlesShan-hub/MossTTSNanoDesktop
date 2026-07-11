@@ -29,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Row(
       children: [
         MossGlassSidebar(
@@ -38,7 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.fromLTRB(kS16, kS16, kS16, kS8),
               child: Text('设置', style: TextStyle(
                 fontSize: kTextBase, fontWeight: FontWeight.w600,
-                color: kTextSecondary, letterSpacing: 0.5,
+                color: theme.textSecondary, letterSpacing: 0.5,
               )),
             ),
             ...List.generate(_navItems.length, (i) {

@@ -234,6 +234,8 @@ class _VoicesPageState extends State<VoicesPage> {
   Future<void> _load({bool refresh = false}) async {
     if (!refresh && _loaded) return;
     try {
+      // 强制刷新缓存，确保编辑后的修改同步到音色列表
+      if (refresh) VoiceService.resetCache();
       final voices = await VoiceService.loadVoices();
       for (final v in voices) {
         _fileExists[v.id] = await VoiceService.checkFileExists(v);
@@ -275,6 +277,7 @@ class _VoicesPageState extends State<VoicesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     if (!_loaded) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -322,7 +325,7 @@ class _VoicesPageState extends State<VoicesPage> {
                   ),
                   const SizedBox(width: kS6),
                   Text('隐藏的音色 (${_hiddenIds.length})',
-                    style: TextStyle(fontSize: kTextSm, color: _hiddenIds.isEmpty ? kTextMuted : kTextSecondary)),
+                    style: TextStyle(fontSize: kTextSm, color: _hiddenIds.isEmpty ? theme.textMuted : theme.textSecondary)),
                 ],
               ),
             ],
@@ -353,7 +356,7 @@ class _VoicesPageState extends State<VoicesPage> {
             padding: const EdgeInsets.fromLTRB(kS16, 0, kS16, kS16),
             child: Text(
               '导入的音频文件（WAV）将作为语音克隆的参考音色。\n建议 3-10 秒的清晰人声片段。',
-              style: TextStyle(fontSize: kTextSm, color: kTextMuted, height: 1.5),
+              style: TextStyle(fontSize: kTextSm, color: theme.textMuted, height: 1.5),
             ),
           ),
         ]),
@@ -361,7 +364,7 @@ class _VoicesPageState extends State<VoicesPage> {
           margin: const EdgeInsets.all(kS16),
           padding: const EdgeInsets.all(kS16),
           child: filtered.isEmpty
-            ? Center(child: Text('没有匹配的音色', style: TextStyle(color: kTextMuted)))
+            ? Center(child: Text('没有匹配的音色', style: TextStyle(color: theme.textMuted)))
             : ListView(
                 physics: const BouncingScrollPhysics(),
                 children: [
@@ -369,7 +372,7 @@ class _VoicesPageState extends State<VoicesPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: kS8),
                       child: Text('${entry.key} (${entry.value.length})',
-                        style: const TextStyle(fontSize: kTextBase, fontWeight: FontWeight.w600, color: kTextSecondary)),
+                        style: TextStyle(fontSize: kTextBase, fontWeight: FontWeight.w600, color: theme.textSecondary)),
                     ),
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -400,10 +403,10 @@ class _VoicesPageState extends State<VoicesPage> {
   }
 
   Widget _voiceCard(Voice v) {
+    final theme = MossTheme.of(context);
     return MossGlassCard(
       height: 130,
       padding: const EdgeInsets.all(kS12),
-      color: Colors.white.withValues(alpha: 0.45),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -414,11 +417,11 @@ class _VoicesPageState extends State<VoicesPage> {
             ],
           ),
           const SizedBox(height: kS6),
-          Text(v.name, style: const TextStyle(fontSize: kTextMd, fontWeight: FontWeight.w500, color: kTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(v.name, style: TextStyle(fontSize: kTextMd, fontWeight: FontWeight.w500, color: theme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
           if (v.description.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: kS2),
-              child: Text(v.description, style: TextStyle(fontSize: kTextSm, color: kTextMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
+              child: Text(v.description, style: TextStyle(fontSize: kTextSm, color: theme.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
             ),
           const Expanded(child: SizedBox.shrink()),
           Row(
@@ -427,7 +430,7 @@ class _VoicesPageState extends State<VoicesPage> {
                 icon: _playingId == v.id ? Icons.stop : Icons.play_arrow,
                 tooltip: '试听',
                 onTap: () => _playPreview(v),
-                color: _playingId == v.id ? Colors.blue : null,
+                color: _playingId == v.id ? theme.accent : null,
               ),
               const SizedBox(width: kS8),
               MossIconButton(
@@ -439,7 +442,7 @@ class _VoicesPageState extends State<VoicesPage> {
               const SizedBox(width: kS8),
               MossIconButton(icon: Icons.edit_outlined, tooltip: '编辑', onTap: () => _editVoice(v)),
               const SizedBox(width: kS8),
-              MossIconButton(icon: Icons.delete_outline, tooltip: '删除', onTap: () => _deleteVoice(v), color: kError),
+              MossIconButton(icon: Icons.delete_outline, tooltip: '删除', onTap: () => _deleteVoice(v), color: theme.error),
             ],
           ),
         ],

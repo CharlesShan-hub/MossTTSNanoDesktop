@@ -165,21 +165,22 @@ class MossSettingsSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(label, style: const TextStyle(fontSize: kTextBase, color: kTextSecondary)),
+            Text(label, style: TextStyle(fontSize: kTextBase, color: theme.textSecondary)),
             const Spacer(),
-            Text(formatValue(value), style: const TextStyle(fontSize: kTextBase, color: kTextPrimary)),
+            Text(formatValue(value), style: TextStyle(fontSize: kTextBase, color: theme.textPrimary)),
           ],
         ),
         SliderTheme(
           data: SliderThemeData(
             trackHeight: 3,
             activeTrackColor: color ?? kAccent,
-            inactiveTrackColor: kBorder,
+            inactiveTrackColor: theme.border,
             thumbColor: color ?? kAccent,
             overlayColor: (color ?? kAccent).withValues(alpha: 0.1),
           ),
@@ -189,7 +190,7 @@ class MossSettingsSlider extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        Text(hint, style: const TextStyle(fontSize: kTextSm, color: kTextMuted)),
+        Text(hint, style: TextStyle(fontSize: kTextSm, color: theme.textMuted)),
       ],
     );
   }
@@ -210,11 +211,12 @@ class MossSettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Row(
       children: [
         SizedBox(
           width: 120,
-          child: Text(label, style: TextStyle(fontSize: kTextBase, color: kTextSecondary)),
+          child: Text(label, style: TextStyle(fontSize: kTextBase, color: theme.textSecondary)),
         ),
         const SizedBox(width: kS8),
         Expanded(child: control),
@@ -238,12 +240,13 @@ class MossSettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = MossTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: kTextMd, fontWeight: FontWeight.w600, color: kTextPrimary)),
+        Text(title, style: TextStyle(fontSize: kTextMd, fontWeight: FontWeight.w600, color: theme.textPrimary)),
         const SizedBox(height: kS4),
-        Text(description, style: const TextStyle(fontSize: kTextSm, color: kTextMuted)),
+        Text(description, style: TextStyle(fontSize: kTextSm, color: theme.textMuted)),
         const SizedBox(height: kS12),
         MossCard(
           padding: const EdgeInsets.all(kS16),
@@ -255,7 +258,7 @@ class MossSettingsGroup extends StatelessWidget {
   }
 }
 
-// ─── MossSettingsNavItem ─────────────────────────────────────────────────
+// ─── MossSettingsNavItem（药丸风格） ─────────────────────────────────────
 class MossSettingsNavItem extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -274,31 +277,40 @@ class MossSettingsNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        splashColor: color.withValues(alpha: 0.12),
-        highlightColor: color.withValues(alpha: 0.05),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),
-          decoration: BoxDecoration(
-            color: active ? color.withValues(alpha: 0.08) : Colors.transparent,
-            border: Border(
-              right: BorderSide(color: active ? color : Colors.transparent, width: 2),
+    final theme = MossTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kS8, vertical: kS4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          splashColor: color.withValues(alpha: 0.15),
+          highlightColor: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS10),
+            decoration: BoxDecoration(
+              color: active ? color.withValues(alpha: 0.12) : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: active ? color.withValues(alpha: 0.30) : Colors.transparent,
+                width: 0.5,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: active ? color : kTextSecondary),
-              const SizedBox(width: kS10),
-              Text(label, style: TextStyle(
-                fontSize: kTextBase,
-                color: active ? color : kTextSecondary,
-                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-              )),
-            ],
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: active ? color : theme.textSecondary),
+                const SizedBox(width: kS10),
+                Text(label, style: TextStyle(
+                  fontSize: kTextBase,
+                  color: active ? color : theme.textSecondary,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                )),
+              ],
+            ),
           ),
         ),
       ),

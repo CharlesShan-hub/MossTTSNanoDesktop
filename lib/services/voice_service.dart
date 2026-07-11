@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -10,6 +11,9 @@ class VoiceService {
   static List<Voice> _builtinVoices = [];
   static List<Voice> _userVoices = [];
   static bool _loaded = false;
+
+  /// 音色数据变更通知 — 页面通过 addListener 订阅
+  static final ChangeNotifier notifier = ChangeNotifier();
 
   /// 平台无关的应用支持目录
   /// macOS: ~/Library/Application Support/com.example.mossTtsNano
@@ -114,6 +118,7 @@ class VoiceService {
         description: description,
       );
     }
+    notifier.notifyListeners();
   }
 
   /// 加载用户自定义音色
@@ -175,6 +180,7 @@ class VoiceService {
 
     _userVoices.add(voice);
     await _saveUserVoices();
+    notifier.notifyListeners();
     return voice;
   }
 
@@ -204,6 +210,7 @@ class VoiceService {
       description: description,
     );
     await _saveUserVoices();
+    notifier.notifyListeners();
   }
 
   /// 删除用户音色
@@ -219,6 +226,7 @@ class VoiceService {
 
     _userVoices.removeAt(idx);
     await _saveUserVoices();
+    notifier.notifyListeners();
   }
 
   /// 检查音频文件是否存在

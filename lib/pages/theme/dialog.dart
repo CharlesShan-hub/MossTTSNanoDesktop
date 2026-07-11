@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'moss_theme.dart';
 
 // ─── MossDialog ───────────────────────────────────────────────────────────
 Future<T?> showMossDialog<T>({
@@ -10,17 +11,24 @@ Future<T?> showMossDialog<T>({
   String? cancelText,
   Future<bool?> Function()? onConfirm,
 }) {
+  final theme = MossTheme.of(context);
   return showDialog<T>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(title, style: const TextStyle(fontSize: kTextMd)),
+      backgroundColor: theme.surface,
+      titleTextStyle: TextStyle(fontSize: kTextMd, color: theme.textPrimary, fontWeight: FontWeight.w600),
+      contentTextStyle: TextStyle(fontSize: kTextBase, color: theme.textPrimary),
+      title: Text(title),
       content: SizedBox(width: 300, child: content),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadiusXl)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kRadiusXl),
+        side: BorderSide(color: theme.border),
+      ),
       actions: [
         if (cancelText != null)
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(cancelText, style: const TextStyle(fontSize: kTextBase)),
+            child: Text(cancelText, style: TextStyle(fontSize: kTextBase, color: theme.textSecondary)),
           ),
         if (confirmText != null)
           TextButton(
@@ -32,7 +40,7 @@ Future<T?> showMossDialog<T>({
                 Navigator.pop(ctx, true);
               }
             },
-            child: Text(confirmText, style: const TextStyle(fontSize: kTextBase)),
+            child: Text(confirmText, style: TextStyle(fontSize: kTextBase, color: theme.accent)),
           ),
       ],
     ),
