@@ -16,6 +16,7 @@ Future<bool?> showImportVoiceDialog(BuildContext context) async {
   final nameCtrl = TextEditingController(text: result.files.single.name.split('.').first);
   final langCtrl = TextEditingController();
   final descCtrl = TextEditingController();
+  final tagCtrl = TextEditingController();
 
   return showMossDialog<bool>(
     context: context,
@@ -26,6 +27,8 @@ Future<bool?> showImportVoiceDialog(BuildContext context) async {
         MossTextField(controller: nameCtrl, hintText: I18n.t('voices.importName')),
         const SizedBox(height: kS8),
         MossTextField(controller: langCtrl, hintText: I18n.t('voices.importLang')),
+        const SizedBox(height: kS8),
+        MossTextField(controller: tagCtrl, hintText: I18n.t('voices.importTag')),
         const SizedBox(height: kS8),
         MossTextField(controller: descCtrl, hintText: I18n.t('voices.importDesc')),
       ],
@@ -39,6 +42,7 @@ Future<bool?> showImportVoiceDialog(BuildContext context) async {
         language: langCtrl.text.trim(),
         description: descCtrl.text.trim(),
         sourceFilePath: filePath,
+        tag: tagCtrl.text.trim().isNotEmpty ? tagCtrl.text.trim() : null,
       );
       return true;
     },
@@ -49,6 +53,7 @@ Future<bool?> showImportVoiceDialog(BuildContext context) async {
 Future<bool?> showEditVoiceDialog(BuildContext context, Voice voice) async {
   final nameCtrl = TextEditingController(text: voice.name);
   final langCtrl = TextEditingController(text: voice.language);
+  final tagCtrl = TextEditingController(text: voice.tag ?? '');
   final descCtrl = TextEditingController(text: voice.description);
 
   return showMossDialog<bool>(
@@ -61,21 +66,26 @@ Future<bool?> showEditVoiceDialog(BuildContext context, Voice voice) async {
         const SizedBox(height: kS8),
         MossTextField(controller: langCtrl, hintText: I18n.t('voices.editLang')),
         const SizedBox(height: kS8),
+        MossTextField(controller: tagCtrl, hintText: I18n.t('voices.editTag')),
+        const SizedBox(height: kS8),
         MossTextField(controller: descCtrl, hintText: I18n.t('voices.editDesc')),
       ],
     ),
     cancelText: I18n.t('voices.cancel'),
     confirmText: I18n.t('voices.submitEdit'),
     onConfirm: () async {
+      final tag = tagCtrl.text.trim().isNotEmpty ? tagCtrl.text.trim() : null;
       if (voice.isUserVoice) {
         await VoiceService.updateVoice(
           id: voice.id, name: nameCtrl.text.trim(),
           language: langCtrl.text.trim(), description: descCtrl.text.trim(),
+          tag: tag,
         );
       } else {
         await VoiceService.updateBuiltinVoice(
           id: voice.id, name: nameCtrl.text.trim(),
           language: langCtrl.text.trim(), description: descCtrl.text.trim(),
+          tag: tag,
         );
       }
       return true;

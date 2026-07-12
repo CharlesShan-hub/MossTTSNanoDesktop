@@ -85,6 +85,7 @@ class VoiceService {
           name: override['name'],
           language: override['language'],
           description: override['description'],
+          tag: override['tag'],
         );
       }).toList();
       _loaded = true;
@@ -100,6 +101,7 @@ class VoiceService {
     String? name,
     String? language,
     String? description,
+    String? tag,
   }) async {
     final existing = _builtinOverrides[id] ?? {};
     _builtinOverrides[id] = {
@@ -107,6 +109,7 @@ class VoiceService {
       if (name != null && name.isNotEmpty) 'name': name,
       if (language != null) 'language': language,
       if (description != null) 'description': description,
+      if (tag != null) 'tag': tag,
     };
     await _saveBuiltinOverrides();
     // 同步更新内存中的内置音色
@@ -116,6 +119,7 @@ class VoiceService {
         name: name,
         language: language,
         description: description,
+        tag: tag,
       );
     }
     notifier.notifyListeners();
@@ -149,6 +153,7 @@ class VoiceService {
       'language': v.language,
       'description': v.description,
       'hidden': v.hidden,
+      if (v.tag != null) 'tag': v.tag,
     }).toList();
     await file.writeAsString(jsonEncode(data));
   }
@@ -159,6 +164,7 @@ class VoiceService {
     required String language,
     required String description,
     required String sourceFilePath,
+    String? tag,
   }) async {
     final voicesDir = await _userVoicesDir;
     final id = 'user_${DateTime.now().millisecondsSinceEpoch}';
@@ -176,6 +182,7 @@ class VoiceService {
       description: description,
       hidden: false,
       isUserVoice: true,
+      tag: tag,
     );
 
     _userVoices.add(voice);
@@ -191,6 +198,7 @@ class VoiceService {
     String? language,
     String? description,
     String? sourceFilePath,
+    String? tag,
   }) async {
     final idx = _userVoices.indexWhere((v) => v.id == id);
     if (idx == -1) return;
@@ -208,6 +216,7 @@ class VoiceService {
       name: name,
       language: language,
       description: description,
+      tag: tag,
     );
     await _saveUserVoices();
     notifier.notifyListeners();

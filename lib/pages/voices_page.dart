@@ -88,8 +88,15 @@ class _VoicesPageState extends State<VoicesPage> {
   void _restoreBuiltin() { setState(() => _hiddenIds.clear()); _saveHiddenIds(); }
 
   Future<void> _importVoice() async {
-    final ok = await showImportVoiceDialog(context);
-    if (ok == true) await _load(refresh: true);
+    try {
+      final ok = await showImportVoiceDialog(context);
+      if (ok == true) await _load(refresh: true);
+    } catch (e, st) {
+      debugPrint('[VOICES] import voice error: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import error: $e')));
+      }
+    }
   }
 
   Future<void> _editVoice(Voice voice) async {
@@ -164,15 +171,15 @@ class _VoicesPageState extends State<VoicesPage> {
           children: [
             MossSidebarSection(title: I18n.t('voices.operations'), child: Column(children: [
               SizedBox(width: double.infinity, child: MossButton(
-                text: I18n.t('voices.import'), icon: Icons.add, onTap: _importVoice, color: widget.theme.main)),
+                text: I18n.t('voices.import'), color: widget.theme.main, onTap: _importVoice)),
               const SizedBox(height: kS6),
               SizedBox(width: double.infinity, child: MossButton(
-                text: I18n.t('voices.refresh'), icon: Icons.refresh, type: MossButtonType.secondary,
+                text: I18n.t('voices.refresh'), icon: Icons.refresh, pill: true,
                 color: widget.theme.main, onTap: () => _load(refresh: true))),
               if (_hiddenIds.isNotEmpty) ...[
                 const SizedBox(height: kS6),
                 SizedBox(width: double.infinity, child: MossButton(
-                  text: I18n.t('voices.restore'), icon: Icons.restore, type: MossButtonType.secondary,
+                  text: I18n.t('voices.restore'), icon: Icons.restore, pill: true,
                   color: widget.theme.main, onTap: _restoreBuiltin)),
               ],
               const SizedBox(height: kS8),

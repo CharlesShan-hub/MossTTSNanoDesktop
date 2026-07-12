@@ -13,6 +13,7 @@ class MossButton extends StatelessWidget {
   final double height;
   final Color? color;
   final bool loading;
+  final bool pill;
 
   const MossButton({
     super.key,
@@ -23,6 +24,7 @@ class MossButton extends StatelessWidget {
     this.height = 32,
     this.color,
     this.loading = false,
+    this.pill = false,
   });
 
   @override
@@ -34,39 +36,51 @@ class MossButton extends StatelessWidget {
     Color borderColor;
 
     final accent = color ?? theme.accent;
+    final borderRadius = pill ? BorderRadius.circular(20) : BorderRadius.circular(kRadiusMd);
 
-    switch (type) {
-      case MossButtonType.primary:
-        bgColor = disabled ? accent.withValues(alpha: 0.5) : accent;
-        textColor = Colors.white;
-        borderColor = Colors.transparent;
-      case MossButtonType.secondary:
-        bgColor = disabled ? theme.surface.withValues(alpha: 0.5) : theme.surface;
-        textColor = disabled ? theme.textMuted : theme.textPrimary;
-        borderColor = theme.border;
-      case MossButtonType.ghost:
-        bgColor = Colors.transparent;
-        textColor = disabled ? theme.textMuted : accent;
-        borderColor = Colors.transparent;
+    if (pill) {
+      bgColor = disabled ? accent.withValues(alpha: 0.06) : accent.withValues(alpha: 0.04);
+      textColor = disabled ? theme.textMuted : accent;
+      borderColor = disabled ? theme.border.withValues(alpha: 0.5) : accent.withValues(alpha: 0.3);
+    } else {
+      switch (type) {
+        case MossButtonType.primary:
+          bgColor = disabled ? accent.withValues(alpha: 0.5) : accent;
+          textColor = Colors.white;
+          borderColor = Colors.transparent;
+        case MossButtonType.secondary:
+          bgColor = disabled ? theme.surface.withValues(alpha: 0.5) : theme.surface;
+          textColor = disabled ? theme.textMuted : theme.textPrimary;
+          borderColor = theme.border;
+        case MossButtonType.ghost:
+          bgColor = Colors.transparent;
+          textColor = disabled ? theme.textMuted : accent;
+          borderColor = Colors.transparent;
+      }
     }
 
     return SizedBox(
       height: height,
       child: Material(
         color: bgColor,
-        borderRadius: BorderRadius.circular(kRadiusMd),
+        borderRadius: borderRadius,
         child: InkWell(
           onTap: disabled ? null : onTap,
-          borderRadius: BorderRadius.circular(kRadiusMd),
-          splashColor: textColor.withValues(alpha: 0.15),
-          highlightColor: textColor.withValues(alpha: 0.08),
+          borderRadius: borderRadius,
+          splashColor: accent.withValues(alpha: 0.12),
+          highlightColor: accent.withValues(alpha: 0.06),
           child: Container(
-            decoration: type == MossButtonType.secondary
+            decoration: pill
                 ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(kRadiusMd),
+                    borderRadius: borderRadius,
                     border: Border.all(color: borderColor),
                   )
-                : null,
+                : type == MossButtonType.secondary
+                    ? BoxDecoration(
+                        borderRadius: borderRadius,
+                        border: Border.all(color: borderColor),
+                      )
+                    : null,
             padding: EdgeInsets.symmetric(horizontal: icon != null ? kS10 : kS16),
             child: Center(
               child: Row(

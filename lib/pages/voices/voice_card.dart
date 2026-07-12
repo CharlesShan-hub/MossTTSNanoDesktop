@@ -48,6 +48,10 @@ class VoiceCard extends StatelessWidget {
           Row(
             children: [
               MossBadge(text: voice.language, color: _langBadgeColor(voice.language)),
+              if (voice.tag != null && voice.tag!.isNotEmpty) ...[
+                const SizedBox(width: kS6),
+                MossBadge(text: voice.tag!, color: themeAccent),
+              ],
             ],
           ),
           const SizedBox(height: kS6),
