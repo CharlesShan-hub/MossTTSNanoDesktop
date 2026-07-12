@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -10,6 +11,8 @@ import '../models/voice.dart';
 import '../services/app_state.dart';
 import '../services/book_service.dart';
 import '../services/i18n_service.dart';
+import '../services/text_rule_service.dart';
+import '../services/onnx_engine.dart';
 import '../services/voice_service.dart';
 import 'book/book_sidebar.dart';
 import 'book/segment_row.dart';
@@ -32,6 +35,8 @@ class _BookPageState extends State<BookPage> {
   final Set<String> _playingSegments = {};
   final Map<String, String> _cache = {}; // segmentId → cachedWavPath
   bool _generating = false;
+  int _concurrency = 1;
+  bool _playAll = false;
 
   /// 缓存目录
   String get _cacheDir => '${Directory.systemTemp.path}/moss_book_cache/${_project?.name ?? 'tmp'}';
@@ -78,7 +83,10 @@ class _BookPageState extends State<BookPage> {
     _loadVoices();
   }
 
-  void _onVoicesChanged() => _loadVoices();
+  void _onVoicesChanged() {
+    _clearAllCache();
+    _loadVoices();
+  }
 
   @override
   void dispose() {
@@ -91,16 +99,15 @@ class _BookPageState extends State<BookPage> {
     final visibleVoices = _voices.where((v) => !v.hidden).toList();
     final voiceId = VoiceChip.firstVoiceForTag(visibleVoices, seg.voiceId) ?? seg.voiceId;
     if (seg.text.trim().isEmpty || voiceId.isEmpty) return;
-    if (_playingSegments.contains(seg.id)) { _player.stop(); return; }
+    if (_playingSegments.contains(seg.id)) { _player.stop(); _playAll = false; return; }
 
-    await _player.stop(); // 释放上一个音频资源
+    await _player.stop();
     setState(() => _playingSegments.add(seg.id));
     try {
-      // 优先用缓存
       String? wavPath = _cache[seg.id];
       if (wavPath == null || !File(wavPath).existsSync()) {
         wavPath = await AppState.of(context).synthesize(
-          voiceId: voiceId, text: seg.text, params: {},
+          voiceId: voiceId, text: TextRuleService.apply(seg.text), params: {}, tag: 'play',
         );
         if (wavPath != null) {
           final dest = _cachePath(seg.id);
@@ -110,9 +117,26 @@ class _BookPageState extends State<BookPage> {
           wavPath = dest;
         }
       }
-      if (wavPath != null) await _player.play(DeviceFileSource(wavPath));
+      if (wavPath != null) {
+        unawaited(_player.onPlayerComplete.firstWhere((_) => true).timeout(const Duration(seconds: 30)).then((_) {
+          if (mounted && _playAll) _playNext(seg);
+        }));
+        await _player.play(DeviceFileSource(wavPath));
+      }
     } catch (_) {}
     if (mounted) setState(() => _playingSegments.remove(seg.id));
+  }
+
+  void _playNext(BookSegment current) {
+    if (_project == null) return;
+    final i = _project!.segments.indexOf(current);
+    if (i < 0 || i + 1 >= _project!.segments.length) { _playAll = false; return; }
+    final next = _project!.segments[i + 1];
+    if (next.text.trim().isEmpty || next.voiceId.isEmpty) {
+      _playNext(next);
+      return;
+    }
+    _playSegment(next);
   }
 
   Future<void> _generateAll() async {
@@ -120,6 +144,27 @@ class _BookPageState extends State<BookPage> {
     setState(() => _generating = true);
     final ctrl = AppState.of(context);
     final total = _project!.segments.length;
+    final n = _concurrency.clamp(1, 8);
+    final visibleVoices = _voices.where((v) => !v.hidden).toList();
+
+    // 预创建引擎池（每个线程独立引擎）
+    final engines = <OnnxEngine>[];
+    if (n > 1) {
+      try {
+        for (int e = 0; e < n; e++) {
+          final eng = OnnxEngine();
+          await eng.load(bundleBasePath: 'assets/models');
+          engines.add(eng);
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(I18n.t('book.enginePoolFailed', params: {'e': '$e'})),
+          duration: const Duration(seconds: 3),
+        ));
+        for (final e in engines) { e.dispose(); }
+        engines.clear();
+      }
+    }
 
     try {
       Directory(_cacheDir).createSync(recursive: true);
@@ -128,30 +173,41 @@ class _BookPageState extends State<BookPage> {
       if (exportDir.existsSync()) exportDir.deleteSync(recursive: true);
       exportDir.createSync(recursive: true);
 
-      for (int i = 0; i < total; i++) {
-        final seg = _project!.segments[i];
-        if (seg.text.trim().isEmpty || seg.voiceId.isEmpty) continue;
+      for (int batch = 0; batch < total; batch += n) {
+        final end = (batch + n).clamp(0, total);
+        final futures = <Future<void>>[];
 
-        final tagLabel = seg.voiceId.isNotEmpty ? seg.voiceId : 'unknown';
-        final dest = '${exportDir.path}/${(i + 1).toString().padLeft(3, '0')}_$tagLabel.wav';
+        for (int i = batch; i < end; i++) {
+           final engineIdx = engines.isNotEmpty ? i % engines.length : -1; // 循环分配引擎
+          futures.add(() async {
+            final seg = _project!.segments[i];
+            if (seg.text.trim().isEmpty || seg.voiceId.isEmpty) return;
 
-        // 检查缓存
-        final cachePath = _cachePath(seg.id);
-        if (_cache.containsKey(seg.id) && File(cachePath).existsSync()) {
-          await File(cachePath).copy(dest);
-          continue;
+            final tagLabel = seg.voiceId.isNotEmpty ? seg.voiceId : 'unknown';
+            final dest = '${exportDir.path}/${(i + 1).toString().padLeft(3, '0')}_$tagLabel.wav';
+            final cachePath = _cachePath(seg.id);
+            if (_cache.containsKey(seg.id) && File(cachePath).existsSync()) {
+              await File(cachePath).copy(dest);
+              return;
+            }
+
+            final voiceId = VoiceChip.firstVoiceForTag(visibleVoices, seg.voiceId) ?? seg.voiceId;
+            final engine = engineIdx >= 0 && engineIdx < engines.length ? engines[engineIdx] : null;
+            final wavPath = await ctrl.synthesize(
+              voiceId: voiceId, text: TextRuleService.apply(seg.text),
+              params: {}, tag: 'gen_$i', engine: engine,
+            );
+            if (wavPath != null) {
+              await File(wavPath).copy(dest);
+              await File(wavPath).copy(cachePath);
+              _markCached(seg.id, cachePath);
+            }
+          }());
         }
 
-        ctrl.status = I18n.t('book.generatingProgress', params: {'i': '${i + 1}', 'total': '$total'});
-
-        final visibleVoices = _voices.where((v) => !v.hidden).toList();
-        final voiceId = VoiceChip.firstVoiceForTag(visibleVoices, seg.voiceId) ?? seg.voiceId;
-        final wavPath = await ctrl.synthesize(voiceId: voiceId, text: seg.text, params: {});
-        if (wavPath != null) {
-          await File(wavPath).copy(dest);
-          await File(wavPath).copy(cachePath);
-          _markCached(seg.id, cachePath);
-        }
+        await Future.wait(futures);
+        if (mounted) ctrl.status = I18n.t('book.generatingProgress',
+            params: {'i': '${end.clamp(0, total)}', 'total': '$total'});
       }
 
       if (mounted) {
@@ -161,7 +217,9 @@ class _BookPageState extends State<BookPage> {
           action: SnackBarAction(label: I18n.t('single.openDir'), onPressed: () => Process.run('open', ['-R', exportDir.path])),
         ));
       }
-    } catch (_) {}
+    } catch (e, st) { debugPrint('[book] generateAll error: $e\n$st'); }
+    // 清理引擎池
+    for (final e in engines) { e.dispose(); }
     if (mounted) setState(() => _generating = false);
     ctrl.status = I18n.t('app.ready');
   }
@@ -267,7 +325,13 @@ class _BookPageState extends State<BookPage> {
 
   Future<void> _loadProject() async {
     final projects = await BookService.listProjects();
-    if (!mounted || projects.isEmpty) return;
+    if (!mounted) return;
+    if (projects.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(I18n.t('book.noProjects')), duration: const Duration(seconds: 2),
+      ));
+      return;
+    }
     final selected = await showMossDialog<String>(
       context: context, title: I18n.t('book.loadProject'),
       content: Builder(builder: (context) {
@@ -327,6 +391,10 @@ class _BookPageState extends State<BookPage> {
               onGenerateAll: _project != null ? _generateAll : null,
               hasProject: _project != null,
               generating: _generating,
+              concurrency: _concurrency,
+              onConcurrencyChanged: (n) => setState(() => _concurrency = n),
+              playAll: _playAll,
+              onPlayAllChanged: (v) => setState(() => _playAll = v),
             )],
         ),
         Expanded(child: MossGlassPanel(

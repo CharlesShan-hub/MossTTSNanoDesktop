@@ -7,6 +7,7 @@ import 'settings/param_settings.dart';
 import 'settings/api_settings.dart';
 import 'settings/appearance_settings.dart';
 import 'settings/shortcuts_settings.dart';
+import 'settings/text_rules_settings.dart';
 
 class SettingsPage extends StatefulWidget {
   final ColorSeries theme;
@@ -26,6 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
     (I18n.t('settings.navApi'), Icons.cloud),
     (I18n.t('settings.navAppearance'), Icons.palette_outlined),
     (I18n.t('settings.navShortcuts'), Icons.keyboard),
+    (I18n.t('settings.navTextRules'), Icons.find_replace),
   ];
 
   @override
@@ -72,6 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
       case 2: return ApiServiceSettings(color: accent);
       case 3: return AppearanceSettings(color: accent, onThemeToggle: widget.onThemeToggle);
       case 4: return ShortcutsSettings();
+      case 5: return TextRulesSettings(color: accent);
       default: return const SizedBox.shrink();
     }
   }

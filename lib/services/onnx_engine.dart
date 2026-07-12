@@ -18,6 +18,7 @@ import '../models/tts_config.dart';
 /// ```
 class OnnxEngine {
   static bool _envInitialized = false;
+  static int _instanceCount = 0;
 
   TtsConfig? ttsConfig;
   Map<String, dynamic>? ttsMetaRaw;
@@ -25,15 +26,22 @@ class OnnxEngine {
   Map<String, OrtSession> sessions = {};
   String? _tempDir;
 
-  /// 释放所有 Session 和环境
+  OnnxEngine() {
+    _instanceCount++;
+  }
+
+  /// 释放所有 Session 和环境（仅最后一个实例真正释放 ORT 环境）
   void dispose() {
     for (final s in sessions.values) {
       s.release();
     }
     sessions.clear();
     ttsConfig = null;
-    OrtEnv.instance.release();
-    _envInitialized = false;
+    _instanceCount--;
+    if (_instanceCount <= 0) {
+      OrtEnv.instance.release();
+      _envInitialized = false;
+    }
     if (_tempDir != null) {
       try {
         Directory(_tempDir!).deleteSync(recursive: true);

@@ -119,8 +119,11 @@ class TtsController extends ChangeNotifier {
     required String voiceId,
     required String text,
     required Map<String, dynamic> params,
+    String? tag,
+    OnnxEngine? engine,
   }) async {
-    if (!_loaded || _engine == null || _tokenizer == null) return null;
+    final eng = engine ?? _engine;
+    if (!_loaded || eng == null || _tokenizer == null) return null;
 
     final allVoices = await VoiceService.loadVoices();
     final voice = allVoices.where((v) => v.id == voiceId).firstOrNull;
@@ -144,7 +147,7 @@ class TtsController extends ChangeNotifier {
         status = I18n.t('single.encodingVoice');
         final codes = await encodeAudioToCodes(
           assetPath: voice.file,
-          engine: _engine!,
+          engine: eng!,
           codecMeta: _codecMeta!,
         );
         if (codes == null || codes.isEmpty) {
@@ -163,8 +166,8 @@ class TtsController extends ChangeNotifier {
       } catch (_) {}
 
       final inferencer = TtsInferencer(
-        sessions: _engine!.sessions,
-        ttsMeta: _engine!.ttsMetaRaw!,
+        sessions: eng!.sessions,
+        ttsMeta: eng.ttsMetaRaw!,
         manifest: _manifest!,
         codecMeta: _codecMeta!,
         precomputed: randomValues.isNotEmpty ? randomValues : null,
@@ -225,9 +228,9 @@ class TtsController extends ChangeNotifier {
 
       // ── 3. 写入 WAV ──
       final outDir = Directory('${Directory.systemTemp.path}/moss_tts_output');
-      if (outDir.existsSync()) outDir.deleteSync(recursive: true);
-      outDir.createSync();
-      final wavPath = '${outDir.path}/output.wav';
+      outDir.createSync(recursive: true);
+      final suffix = tag != null ? '_$tag' : '';
+      final wavPath = '${outDir.path}/output$suffix.wav';
       writeWav(wavPath, allSamples, sampleRate);
 
       status = I18n.t('app.success');
