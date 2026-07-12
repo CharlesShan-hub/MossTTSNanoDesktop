@@ -116,6 +116,13 @@
     "generateDone": "Generated {n} audio segments",
     "exportAll": "Export All",
     "defaultParams": "Default Params",
+    "rename": "Rename Project",
+    "renameHint": "Enter a new project name",
+    "deleteProject": "Delete Project",
+    "deleteConfirmTitle": "Delete Project",
+    "deleteWarning": "This action cannot be undone! Type {name} to confirm:",
+    "deleteHint": "Enter project name to confirm",
+    "deleteConfirmAction": "Delete",
     "dialogTitle": "Audiobook Default Params",
     "dialogConfirm": "OK"
   },

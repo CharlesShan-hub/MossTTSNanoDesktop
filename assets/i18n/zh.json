@@ -116,6 +116,13 @@
     "generateDone": "已生成 {n} 段音频",
     "exportAll": "全部导出",
     "defaultParams": "默认参数",
+    "rename": "重命名项目",
+    "renameHint": "输入新的项目名称",
+    "deleteProject": "删除项目",
+    "deleteConfirmTitle": "确认删除项目",
+    "deleteWarning": "此操作不可恢复！输入 {name} 确认删除：",
+    "deleteHint": "请输入项目名以确认",
+    "deleteConfirmAction": "确认删除",
     "dialogTitle": "有声书默认参数",
     "dialogConfirm": "确定"
   },

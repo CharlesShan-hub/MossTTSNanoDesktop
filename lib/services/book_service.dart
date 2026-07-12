@@ -54,6 +54,23 @@ class BookService {
     }
   }
 
+  /// 重命名项目（改名后旧文件删除，保存新文件）
+  static Future<void> renameProject(String oldName, String newName) async {
+    if (oldName == newName) return;
+    final dir = await _bookDir;
+    final oldFile = File('${dir.path}/${_safeFileName(oldName)}.json');
+    if (!oldFile.existsSync()) return;
+    try {
+      final raw = await oldFile.readAsString();
+      final project = BookProject.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      project.name = newName;
+      final newFile = File('${dir.path}/${_safeFileName(newName)}.json');
+      await newFile.writeAsString(const JsonEncoder.withIndent('  ').convert(project.toJson()));
+      oldFile.deleteSync();
+      notifier.notifyListeners();
+    } catch (_) {}
+  }
+
   /// 删除项目
   static Future<void> deleteProject(String name) async {
     final dir = await _bookDir;

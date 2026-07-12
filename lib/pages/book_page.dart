@@ -58,22 +58,42 @@ class _BookPageState extends State<BookPage> {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadVoices();
+  /// 从磁盘扫描加载已有缓存
+  void _loadCacheFromDisk() {
+    _cache.clear();
+    final dir = Directory(_cacheDir);
+    if (!dir.existsSync()) return;
+    final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.wav'));
+    for (final f in files) {
+      final segId = f.path.split('/').last.replaceAll('.wav', '');
+      _cache[segId] = f.path;
+    }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _player.onPlayerComplete.listen((_) => _player.stop());
+    VoiceService.notifier.addListener(_onVoicesChanged);
+    _loadVoices();
+  }
+
+  void _onVoicesChanged() => _loadVoices();
+
+  @override
   void dispose() {
+    VoiceService.notifier.removeListener(_onVoicesChanged);
     _player.dispose();
     super.dispose();
   }
 
   Future<void> _playSegment(BookSegment seg) async {
-    final voiceId = VoiceChip.firstVoiceForTag(_voices, seg.voiceId) ?? seg.voiceId;
+    final visibleVoices = _voices.where((v) => !v.hidden).toList();
+    final voiceId = VoiceChip.firstVoiceForTag(visibleVoices, seg.voiceId) ?? seg.voiceId;
     if (seg.text.trim().isEmpty || voiceId.isEmpty) return;
     if (_playingSegments.contains(seg.id)) { _player.stop(); return; }
+
+    await _player.stop(); // 释放上一个音频资源
     setState(() => _playingSegments.add(seg.id));
     try {
       // 优先用缓存
@@ -83,7 +103,6 @@ class _BookPageState extends State<BookPage> {
           voiceId: voiceId, text: seg.text, params: {},
         );
         if (wavPath != null) {
-          // 复制到缓存目录
           final dest = _cachePath(seg.id);
           Directory(_cacheDir).createSync(recursive: true);
           await File(wavPath).copy(dest);
@@ -106,6 +125,7 @@ class _BookPageState extends State<BookPage> {
       Directory(_cacheDir).createSync(recursive: true);
       final appDir = await getApplicationSupportDirectory();
       final exportDir = Directory('${appDir.path}/Exports/${_project!.name}');
+      if (exportDir.existsSync()) exportDir.deleteSync(recursive: true);
       exportDir.createSync(recursive: true);
 
       for (int i = 0; i < total; i++) {
@@ -118,14 +138,14 @@ class _BookPageState extends State<BookPage> {
         // 检查缓存
         final cachePath = _cachePath(seg.id);
         if (_cache.containsKey(seg.id) && File(cachePath).existsSync()) {
-          // 有缓存 → 复制到导出目录
-          if (!File(dest).existsSync()) await File(cachePath).copy(dest);
+          await File(cachePath).copy(dest);
           continue;
         }
 
         ctrl.status = I18n.t('book.generatingProgress', params: {'i': '${i + 1}', 'total': '$total'});
 
-        final voiceId = VoiceChip.firstVoiceForTag(_voices, seg.voiceId) ?? seg.voiceId;
+        final visibleVoices = _voices.where((v) => !v.hidden).toList();
+        final voiceId = VoiceChip.firstVoiceForTag(visibleVoices, seg.voiceId) ?? seg.voiceId;
         final wavPath = await ctrl.synthesize(voiceId: voiceId, text: seg.text, params: {});
         if (wavPath != null) {
           await File(wavPath).copy(dest);
@@ -148,7 +168,7 @@ class _BookPageState extends State<BookPage> {
 
   Future<void> _loadVoices() async {
     final v = await VoiceService.loadVoices();
-    if (mounted) setState(() => _voices = v.where((v) => !v.hidden).toList());
+    if (mounted) setState(() => _voices = v);
   }
 
   void _markUnsaved() { _hasUnsaved = true; }
@@ -185,6 +205,64 @@ class _BookPageState extends State<BookPage> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(I18n.t('book.saved')), duration: const Duration(seconds: 2),
     ));
+  }
+
+  Future<void> _renameProject() async {
+    if (_project == null) return;
+    final ctrl = TextEditingController(text: _project!.name);
+    final ok = await showMossDialog<bool>(
+      context: context, title: I18n.t('book.rename'),
+      content: MossTextField(controller: ctrl, hintText: I18n.t('book.renameHint')),
+      confirmText: I18n.t('book.dialogConfirm'),
+      cancelText: I18n.t('voices.cancel'),
+      onConfirm: () async {
+        final name = ctrl.text.trim();
+        if (name.isEmpty || name == _project!.name) return false;
+        final oldName = _project!.name;
+        await BookService.renameProject(oldName, name);
+        _project!.name = name;
+        _markUnsaved();
+        return true;
+      },
+    );
+    ctrl.dispose();
+    if (ok == true && mounted) setState(() {});
+  }
+
+  Future<void> _deleteProject() async {
+    if (_project == null) return;
+    final projectName = _project!.name;
+    final ctrl = TextEditingController();
+    final ok = await showMossDialog<bool>(
+      context: context, title: I18n.t('book.deleteConfirmTitle'),
+      accentColor: widget.theme.main,
+      content: StatefulBuilder(builder: (context, setDialogState) {
+        final match = ctrl.text.trim() == projectName;
+        return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(I18n.t('book.deleteWarning', params: {'name': projectName}),
+              style: TextStyle(fontSize: kTextMd, color: Colors.redAccent)),
+          const SizedBox(height: kS12),
+          MossTextField(
+            controller: ctrl,
+            hintText: I18n.t('book.deleteHint', params: {'name': projectName}),
+            onChanged: (_) => setDialogState(() {}),
+          ),
+          const SizedBox(height: kS8),
+          SizedBox(width: double.infinity, child: MossButton(
+            text: I18n.t('book.deleteConfirmAction'),
+            color: Colors.redAccent,
+            pill: true,
+            onTap: match ? () => Navigator.of(context).pop(true) : null,
+          )),
+        ]);
+      }),
+      cancelText: I18n.t('voices.cancel'), confirmText: '',
+    );
+    ctrl.dispose();
+    if (ok != true || !mounted) return;
+    await BookService.deleteProject(projectName);
+    _clearAllCache();
+    setState(() { _project = null; _hasUnsaved = false; });
   }
 
   Future<void> _loadProject() async {
@@ -224,7 +302,11 @@ class _BookPageState extends State<BookPage> {
     );
     if (selected == null) return;
     final project = await BookService.loadProject(selected);
-    if (project != null && mounted) { _clearAllCache(); setState(() { _project = project; _hasUnsaved = false; }); }
+    if (project != null && mounted) {
+      setState(() { _project = project; _hasUnsaved = false; });
+      _loadCacheFromDisk();
+      if (mounted) setState(() {});
+    }
   }
 
   @override
@@ -282,6 +364,16 @@ class _BookPageState extends State<BookPage> {
           const SizedBox(width: kS8),
           Text('${_project!.name} — ${segments.length} ${I18n.t('book.segments')}',
               style: TextStyle(fontSize: kTextLg, color: theme.textPrimary, fontWeight: FontWeight.w500)),
+          const SizedBox(width: kS6),
+          MossIconButton(
+            icon: Icons.edit, tooltip: I18n.t('book.rename'),
+            onTap: _renameProject, color: theme.textSecondary,
+          ),
+          const SizedBox(width: kS4),
+          MossIconButton(
+            icon: Icons.delete_outline, tooltip: I18n.t('book.deleteProject'),
+            onTap: _deleteProject, color: theme.error,
+          ),
           const Spacer(),
         ]),
         const SizedBox(height: kS16),
