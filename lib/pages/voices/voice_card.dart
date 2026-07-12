@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/voice.dart';
-import '../../../services/i18n_service.dart';
+import 'package:moss_tts_nano/services/i18n_service.dart';
 import '../theme/components.dart';
 
 Color _langBadgeColor(String lang) {

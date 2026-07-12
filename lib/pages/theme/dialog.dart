@@ -9,6 +9,7 @@ Future<T?> showMossDialog<T>({
   required Widget content,
   String? confirmText,
   String? cancelText,
+  Color? accentColor,
   Future<bool?> Function()? onConfirm,
 }) {
   final theme = MossTheme.of(context);
@@ -40,7 +41,7 @@ Future<T?> showMossDialog<T>({
                 Navigator.pop(ctx, true);
               }
             },
-            child: Text(confirmText, style: TextStyle(fontSize: kTextBase, color: theme.accent)),
+            child: Text(confirmText, style: TextStyle(fontSize: kTextBase, color: accentColor ?? theme.accent)),
           ),
       ],
     ),

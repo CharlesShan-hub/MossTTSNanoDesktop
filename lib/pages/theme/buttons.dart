@@ -64,6 +64,7 @@ class MossButton extends StatelessWidget {
       child: Material(
         color: bgColor,
         borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: disabled ? null : onTap,
           borderRadius: borderRadius,
